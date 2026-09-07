@@ -1,9 +1,9 @@
-use anilist_core::{anime::Anime, minute::Minute};
+use anilist_core::anime::Anime;
 use iced::{
     Element, Font, Length, Padding,
     font::Weight,
     mouse::Interaction,
-    widget::{center, center_x, column, container, mouse_area, text},
+    widget::{center_x, column, container, mouse_area, text},
 };
 
 use crate::component::imager::{Imager, ImagerMessage};
@@ -27,19 +27,17 @@ where
         None => container("").into(),
     };
 
+    let minute = match anime.on_air_time.and_then(|time| time.minute) {
+        Some(time) => format!("@{}", time),
+        None => "時間未定".to_owned(),
+    };
+
     let content = column![
         image,
         center_x(
-            container(text(format!(
-                "@{}",
-                anime
-                    .on_air_time
-                    .map(|time| time.minute.unwrap_or(Minute::MAX))
-                    .unwrap_or(Minute::MAX)
-            )))
-            .style(container::primary)
-            .style(container::rounded_box)
-            .padding(Padding::from([2, 4]))
+            container(text(minute))
+                .style(container::rounded_box)
+                .padding(Padding::from([2, 4]))
         )
         .width(Length::Fill),
         text(&anime.name)

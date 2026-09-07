@@ -11,3 +11,4 @@ reqwest = "0.13.4"
 chrono = "0.4.45"
 tokio = { version = "1.53.1", features = ["full"] }
 iced = { version = "0.14.0", features = ["tokio", "image"] }
+open = "5.3"

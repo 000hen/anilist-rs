@@ -44,6 +44,7 @@ pub enum Message {
     AnimeInformation(Option<Vec<Anime>>),
 
     CloseWindow(window::Id),
+    OpenWeb(String),
     OpenWindow {
         window_id: window::Id,
         window_type: WindowType,
@@ -134,6 +135,11 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
             })
         }
 
+        Message::OpenWeb(url) => {
+            let _ = open::that(url);
+            Task::none()
+        }
+
         Message::CloseWindow(id) => {
             app.windows.remove(&id);
 
@@ -143,6 +149,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
                 Task::none()
             }
         }
+
         Message::OpenWindow {
             window_id,
             window_type,
@@ -165,7 +172,7 @@ pub fn view(app: &App, window_id: window::Id) -> Element<'_, Message> {
     match app.windows.get(&window_id) {
         Some(WindowType::MainWindow) => list::view(app),
         Some(WindowType::AnimeDetailWindow { anime_id }) => match app.state.animes.get(anime_id) {
-            Some(anime) => detail::view(anime),
+            Some(anime) => detail::view(&app.image, anime),
             None => center(container("Sorry, not found it")).into(),
         },
         None => container("Not implemented").into(),

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use iced::{
     Element, Length, Task,
-    widget::{Sensor, container, image, text},
+    widget::{Sensor, center, container, image, text},
 };
 use reqwest::Client;
 
@@ -42,7 +42,7 @@ impl Imager {
                 .into(),
 
             Some(ImageStatus::Pending) => Self::placeholder(),
-            Some(ImageStatus::Failed) => container(text("Failed to load image"))
+            Some(ImageStatus::Failed) => center(container(text("?")))
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .into(),

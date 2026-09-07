@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Minute(u16);
 
@@ -15,6 +17,16 @@ impl Minute {
 
     pub fn get(self) -> u16 {
         self.0
+    }
+}
+
+impl fmt::Display for Minute {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let total_minute = self.0;
+        let hour = total_minute / 60;
+        let minute = total_minute % 60;
+
+        f.write_fmt(format_args!("{:02}:{:02}", hour, minute))
     }
 }
 

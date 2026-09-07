@@ -1,6 +1,6 @@
 use anilist_core::{anime::Anime, minute::Minute};
 use iced::{
-    Color, Element, Font, Length,
+    Element, Font, Length,
     font::Weight,
     mouse::Interaction,
     widget::{column, container, mouse_area, text},
@@ -28,19 +28,20 @@ where
     };
 
     let content = column![
+        image,
         text(format!(
-            "{:?}",
+            "@{}",
             anime
                 .on_air_time
                 .map(|time| time.minute.unwrap_or(Minute::MAX))
                 .unwrap_or(Minute::MAX)
-        )),
-        image,
+        ))
+        .center()
+        .width(Length::Fill),
         text(&anime.name)
             .center()
             .width(Length::Fill)
             .size(24)
-            .color(Color::WHITE)
             .wrapping(text::Wrapping::Word)
             .font(Font {
                 weight: Weight::Bold,

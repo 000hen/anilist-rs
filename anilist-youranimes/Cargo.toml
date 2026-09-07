@@ -1,0 +1,18 @@
+[package]
+name = "anilist-youranimes"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anilist-core = { path = "../anilist-core" }
+anilist-source = { path = "../anilist-source" }
+reqwest = "0.13.4"
+scraper = "0.27.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+chrono = "0.4.45"
+chrono-tz = "0.10.4"
+iana-time-zone = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

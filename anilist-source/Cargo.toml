@@ -1,0 +1,7 @@
+[package]
+name = "anilist-source"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anilist-core = { path = "../anilist-core" }

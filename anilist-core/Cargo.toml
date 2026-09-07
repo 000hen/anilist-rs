@@ -1,0 +1,9 @@
+[package]
+name = "anilist-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+reqwest = "0.13.4"
+chrono = "0.4.45"
+chrono-tz = "0.10.4"

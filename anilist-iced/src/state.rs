@@ -178,3 +178,15 @@ pub fn view(app: &App, window_id: window::Id) -> Element<'_, Message> {
         None => container("Not implemented").into(),
     }
 }
+
+pub fn title(app: &App, window_id: window::Id) -> String {
+    match app.windows.get(&window_id) {
+        Some(WindowType::AnimeDetailWindow { anime_id }) => app
+            .state
+            .animes
+            .get(anime_id)
+            .and_then(|anime| Some(anime.name.clone()))
+            .unwrap_or("Unknown".to_owned()),
+        _ => "Anilist".to_owned(),
+    }
+}

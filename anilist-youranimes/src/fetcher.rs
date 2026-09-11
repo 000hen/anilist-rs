@@ -2,9 +2,14 @@ use anilist_core::{anime::Anime, season::AnimeSeason};
 use anilist_source::{AnimeSource, SourceError};
 use reqwest::{Client, StatusCode};
 
-use crate::{errors::YourAnimesError, parser::list::parse_list_source};
+use crate::{
+    ID_PREFIX,
+    errors::YourAnimesError,
+    parser::{detail::parse_detail, list::parse_list},
+};
 
-const BASE_URL: &str = "https://youranimes.tw/bangumi/";
+const LIST_URL: &str = "https://youranimes.tw/bangumi/";
+const DETAIL_URL: &str = "https://youranimes.tw/animes/";
 const API_BASE_URL: &str = "https://youranimes.tw/api/v1/";
 
 #[derive(Debug, Clone)]
@@ -40,7 +45,36 @@ impl YourAnimesFetcher {
             .await
             .map_err(|source| YourAnimesError::ResponseBody { url, source })?;
 
-        parse_list_source(&content)
+        parse_list(&content)
+    }
+
+    async fn fetch_detail(&self, id: &str) -> Result<Anime, YourAnimesError> {
+        let prefix = format!("{ID_PREFIX}:");
+        let parsed_id = id
+            .strip_prefix(&prefix)
+            .ok_or(YourAnimesError::InvalidResponse {
+                context: "Unexpected YourAnimes id.",
+            })?;
+
+        let url = format!("{DETAIL_URL}{parsed_id}");
+        let response =
+            self.fetcher
+                .get(&url)
+                .send()
+                .await
+                .map_err(|source| YourAnimesError::Request {
+                    url: url.clone(),
+                    source,
+                })?;
+
+        ensure_successful_status(&url, response.status())?;
+
+        let content = response
+            .text()
+            .await
+            .map_err(|source| YourAnimesError::ResponseBody { url, source })?;
+
+        parse_detail(&content)
     }
 }
 
@@ -49,11 +83,11 @@ impl AnimeSource for YourAnimesFetcher {
         self.fetch_list(year, season).await.map_err(Into::into)
     }
 
-    async fn detail(&self, id: String) -> Result<Vec<Anime>, SourceError> {
-        unimplemented!()
+    async fn detail(&self, id: &str) -> Result<Anime, SourceError> {
+        self.fetch_detail(id).await.map_err(Into::into)
     }
 
-    async fn search(&self, keyword: String) -> Result<Vec<Anime>, SourceError> {
+    async fn search(&self, keyword: &str) -> Result<Vec<Anime>, SourceError> {
         unimplemented!()
     }
 }
@@ -67,7 +101,7 @@ fn parse_url(year: u16, season: AnimeSeason) -> String {
         AnimeSeason::Fall => "10",
     };
 
-    format!("{BASE_URL}{year}{month}")
+    format!("{LIST_URL}{year}{month}")
 }
 
 fn ensure_successful_status(url: &str, status: StatusCode) -> Result<(), YourAnimesError> {

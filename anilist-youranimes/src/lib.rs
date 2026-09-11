@@ -5,6 +5,8 @@ pub mod fetcher;
 mod format;
 mod parser;
 
+const ID_PREFIX: &str = "youranimes";
+
 pub fn system_timezone() -> Tz {
     iana_time_zone::get_timezone()
         .expect("system timezone should be available")
@@ -21,22 +23,35 @@ mod tests {
 
     use crate::fetcher::YourAnimesFetcher;
 
-    #[tokio::test]
-    async fn test_fetching() {
+    fn create_source() -> YourAnimesFetcher {
         let client = Client::new();
         let source = YourAnimesFetcher::new(client);
 
-        source.list(2020, AnimeSeason::Summer).await.unwrap();
+        source
+    }
+
+    #[tokio::test]
+    async fn test_fetching() {
+        create_source()
+            .list(2020, AnimeSeason::Summer)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
     async fn test_fetching_latest() {
         let local = Local::now();
-        let client = Client::new();
-        let source = YourAnimesFetcher::new(client);
-
         let season = AnimeSeason::try_from(local.month() as u8).unwrap();
 
-        source.list(local.year() as u16, season).await.unwrap();
+        create_source()
+            .list(local.year() as u16, season)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_fetching_detail() {
+        let detail = create_source().detail("youranimes:1108").await.unwrap();
+        assert_eq!(detail.name, "小林家的龍女僕S");
     }
 }

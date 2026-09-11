@@ -42,6 +42,6 @@ impl Error for SourceError {
 #[allow(async_fn_in_trait)]
 pub trait AnimeSource {
     async fn list(&self, year: u16, season: AnimeSeason) -> Result<Vec<Anime>, SourceError>;
-    async fn search(&self, keyword: String) -> Result<Vec<Anime>, SourceError>;
-    async fn detail(&self, id: String) -> Result<Vec<Anime>, SourceError>;
+    async fn search(&self, keyword: &str) -> Result<Vec<Anime>, SourceError>;
+    async fn detail(&self, id: &str) -> Result<Anime, SourceError>;
 }

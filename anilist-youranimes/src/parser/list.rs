@@ -4,15 +4,15 @@ use scraper::Html;
 
 use crate::{
     errors::YourAnimesError,
-    format::list::AnimeInformation,
+    format::anime::AnimeInformation,
     parser::nextjs::{JsonPath, NextJsExtractor},
     system_timezone,
 };
 
-const MATCH_FORMAT: &str = "{\\\"animes\\\":[";
+const MATCH_FORMAT: &str = "{\\\"animes\\\":";
 const ANIME_LIST_PATH: &[JsonPath<'static>] = &[JsonPath::Index(3), JsonPath::Key("animes")];
 
-pub fn parse_list_source(content: &str) -> Result<Vec<Anime>, YourAnimesError> {
+pub fn parse_list(content: &str) -> Result<Vec<Anime>, YourAnimesError> {
     let document = Html::parse_document(content);
 
     let parsed: Vec<AnimeInformation> =

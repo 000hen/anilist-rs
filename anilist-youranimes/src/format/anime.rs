@@ -10,6 +10,8 @@ use chrono_tz::{Asia::Tokyo, Tz};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
+use crate::ID_PREFIX;
+
 const VENDOR_ICON_BASE_URL: &str = "https://d28s5ztqvkii64.cloudfront.net/images";
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -24,12 +26,12 @@ pub struct AnimeInformation {
     #[serde(default)]
     pub aliases: Vec<String>,
     pub ani_type: String,
+    #[serde(default)]
     pub cast: Vec<Cast>,
     pub comment_count: i64,
     #[serde(default)]
     pub copyright: Option<String>,
     pub cover: String,
-    pub cross: bool,
 
     #[serde(default, deserialize_with = "deserialize_weekday")]
     pub day_of_week: Option<Weekday>,
@@ -40,28 +42,23 @@ pub struct AnimeInformation {
     pub duration_desc: Option<String>,
     pub episode: String,
     pub favorability: Favorability,
-    pub has_news: bool,
-    pub is_favorite: bool,
     #[serde(default)]
     pub jp_name: Option<String>,
     pub name: String,
-    pub news_date: String,
+    #[serde(default)]
     pub olinks: Vec<SocialLink>,
-    pub play_date: String,
-    pub play_eps: i64,
-    pub play_total: i64,
-    pub schedule_date: String,
     #[serde(default)]
     pub season_item_date_modified: Option<String>,
-    pub series_status: String,
+    #[serde(default)]
     pub songs: Vec<Song>,
+    #[serde(default)]
     pub staff: Vec<Staff>,
     pub status: String,
     pub streaming: Vec<Streaming>,
+    #[serde(default)]
     pub studios: Vec<Studio>,
+    #[serde(default)]
     pub tags: HashMap<String, i32>,
-    pub tw_agent: String,
-    pub updated_timestamp: String,
 
     #[serde(rename = "date", default, deserialize_with = "deserialize_time_in_day")]
     pub time_in_day: Option<Minute>,
@@ -98,7 +95,7 @@ impl AnimeInformation {
             .collect();
 
         Ok(Anime {
-            id: format!("youranimes:{}", self.id),
+            id: format!("{}:{}", ID_PREFIX, self.id),
             name: self.name,
             description: self.description,
             on_air_time,

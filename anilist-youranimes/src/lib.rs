@@ -54,4 +54,10 @@ mod tests {
         let detail = create_source().detail("youranimes:1108").await.unwrap();
         assert_eq!(detail.name, "小林家的龍女僕S");
     }
+
+    #[tokio::test]
+    async fn test_fetching_search() {
+        let detail = create_source().search("女僕").await.unwrap();
+        println!("Results: {}", detail[0]);
+    }
 }

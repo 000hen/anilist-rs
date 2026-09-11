@@ -1,17 +1,24 @@
+use std::time::Duration;
+
 use anilist_core::{anime::Anime, season::AnimeSeason};
 use anilist_source::{AnimeSource, SourceError};
+use futures::{StreamExt, TryStreamExt, stream};
+use futures_timer::Delay;
 use reqwest::{Client, StatusCode};
-use scraper::Html;
 
 use crate::{
     ID_PREFIX,
     errors::YourAnimesError,
+    format::search::SearchResult,
     parser::{detail::parse_detail, list::parse_list},
 };
 
 const LIST_URL: &str = "https://youranimes.tw/bangumi/";
 const DETAIL_URL: &str = "https://youranimes.tw/animes/";
 const API_BASE_URL: &str = "https://youranimes.tw/api/v1/";
+
+const REQUEST_INTERVAL: Duration = Duration::from_millis(100);
+const MAX_CONCURRENT: usize = 6;
 
 #[derive(Debug, Clone)]
 pub struct YourAnimesFetcher {
@@ -23,7 +30,7 @@ impl YourAnimesFetcher {
         Self { fetcher: client }
     }
 
-    async fn fetch_and_get_html(&self, url: &str) -> Result<String, YourAnimesError> {
+    async fn fetch_and_get_content(&self, url: &str) -> Result<String, YourAnimesError> {
         let response =
             self.fetcher
                 .get(url)
@@ -53,7 +60,7 @@ impl YourAnimesFetcher {
         season: AnimeSeason,
     ) -> Result<Vec<Anime>, YourAnimesError> {
         let url = parse_url(year, season);
-        let content = self.fetch_and_get_html(&url).await?;
+        let content = self.fetch_and_get_content(&url).await?;
         parse_list(&content)
     }
 
@@ -66,9 +73,38 @@ impl YourAnimesFetcher {
             })?;
 
         let url = format!("{DETAIL_URL}{parsed_id}");
-        let content = self.fetch_and_get_html(&url).await?;
+        let content = self.fetch_and_get_content(&url).await?;
 
         parse_detail(&content)
+    }
+
+    async fn search(&self, keyword: &str) -> Result<Vec<Anime>, YourAnimesError> {
+        let url = parse_search_url(keyword);
+        let content = self.fetch_and_get_content(&url).await?;
+
+        let result = serde_json::from_str::<SearchResult>(&content).map_err(|source| {
+            YourAnimesError::Json {
+                context: "Next.js target data",
+                source,
+            }
+        })?;
+
+        stream::iter(result.result)
+            .enumerate()
+            .then(|(index, item)| async move {
+                if index > 0 {
+                    Delay::new(REQUEST_INTERVAL).await;
+                }
+
+                item
+            })
+            .map(|item| async move {
+                let id = format!("{ID_PREFIX}:{}", item.id);
+                self.fetch_detail(&id).await
+            })
+            .buffered(MAX_CONCURRENT)
+            .try_collect::<Vec<_>>()
+            .await
     }
 }
 
@@ -82,7 +118,7 @@ impl AnimeSource for YourAnimesFetcher {
     }
 
     async fn search(&self, keyword: &str) -> Result<Vec<Anime>, SourceError> {
-        unimplemented!()
+        self.search(keyword).await.map_err(Into::into)
     }
 }
 
@@ -96,6 +132,12 @@ fn parse_url(year: u16, season: AnimeSeason) -> String {
     };
 
     format!("{LIST_URL}{year}{month}")
+}
+
+fn parse_search_url(keyword: &str) -> String {
+    format!(
+        "{API_BASE_URL}animes?tk={keyword}&tags=&page=1&size=100&orderOption=-1&streaming=0&adult=1"
+    )
 }
 
 fn ensure_successful_status(url: &str, status: StatusCode) -> Result<(), YourAnimesError> {

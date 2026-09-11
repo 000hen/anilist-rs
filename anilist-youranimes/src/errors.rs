@@ -30,6 +30,7 @@ pub enum YourAnimesError {
 
 impl From<YourAnimesError> for SourceError {
     fn from(error: YourAnimesError) -> Self {
+        println!("Got error while parsing: {:?}", error);
         match error {
             YourAnimesError::Request { .. }
             | YourAnimesError::UnexpectedStatus { .. }

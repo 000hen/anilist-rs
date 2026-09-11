@@ -16,9 +16,12 @@ edition = "2024"
 anilist-core = { path = "anilist-core" }
 anilist-source = { path = "anilist-source" }
 anilist-youranimes = { path = "anilist-youranimes" }
+async-stream = "0.3"
 cbindgen = "0.29"
 chrono = "0.4.45"
 chrono-tz = "0.10.4"
+futures = "0.3.34"
+futures-timer = "3"
 iana-time-zone = "0.1"
 iced = { version = "0.14.0", features = ["image", "tokio"] }
 open = "5.4.4"

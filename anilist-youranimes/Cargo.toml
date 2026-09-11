@@ -6,8 +6,11 @@ edition.workspace = true
 [dependencies]
 anilist-core.workspace = true
 anilist-source.workspace = true
+async-stream.workspace = true
 chrono.workspace = true
 chrono-tz.workspace = true
+futures.workspace = true
+futures-timer.workspace = true
 iana-time-zone.workspace = true
 reqwest.workspace = true
 scraper.workspace = true

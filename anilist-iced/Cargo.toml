@@ -3,6 +3,10 @@ name = "anilist-iced"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "anilist"
+path = "src/main.rs"
+
 [dependencies]
 anilist-core.workspace = true
 anilist-source.workspace = true

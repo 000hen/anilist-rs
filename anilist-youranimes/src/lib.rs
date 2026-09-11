@@ -2,6 +2,7 @@ use chrono_tz::Tz;
 
 mod errors;
 pub mod fetcher;
+mod format;
 mod parser;
 
 pub fn system_timezone() -> Tz {

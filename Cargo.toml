@@ -16,6 +16,7 @@ edition = "2024"
 anilist-core = { path = "anilist-core" }
 anilist-source = { path = "anilist-source" }
 anilist-youranimes = { path = "anilist-youranimes" }
+cbindgen = "0.29"
 chrono = "0.4.45"
 chrono-tz = "0.10.4"
 iana-time-zone = "0.1"

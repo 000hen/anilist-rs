@@ -5,5 +5,7 @@ edition.workspace = true
 
 [lib]
 crate-type = ["cdylib"]
+name = "anilist"
 
-[dependencies]
+[build-dependencies]
+cbindgen.workspace = true

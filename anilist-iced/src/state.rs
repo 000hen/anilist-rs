@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use anilist_core::{ScheduleDay, anime::Anime, season::AnimeSeason};
 use anilist_source::AnimeSource;
 use anilist_youranimes::fetcher::YourAnimesFetcher;
+use chrono::{Datelike, Local};
 use iced::{
     Element, Size, Subscription, Task,
     widget::{center, container},
@@ -80,6 +81,11 @@ impl App {
         let source = YourAnimesFetcher::new(client.clone());
         let imager = Imager::new(client.clone());
 
+        let now = Local::now();
+        let year = now.year() as u16;
+        let season =
+            AnimeSeason::try_from(now.month() as u8).expect("month should map to a season");
+
         let (id, task) = window::open(create_window_settings());
         (
             Self {
@@ -89,10 +95,13 @@ impl App {
                 windows: Default::default(),
                 state: Default::default(),
             },
-            task.map(move |id| Message::OpenWindow {
-                window_id: id,
-                window_type: WindowType::MainWindow,
-            }),
+            Task::batch([
+                task.map(move |id| Message::OpenWindow {
+                    window_id: id,
+                    window_type: WindowType::MainWindow,
+                }),
+                Task::done(Message::UpdateAnime(year, season)),
+            ]),
         )
     }
 }

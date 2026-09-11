@@ -2,7 +2,7 @@ use anilist_core::{ScheduleDay, get_current_week_order, season::AnimeSeason};
 use chrono::{Datelike, Local};
 use iced::{
     Element, Length,
-    widget::{button, center, column, container, grid, row, scrollable, stack, text},
+    widget::{center, column, container, grid, scrollable, stack, text},
 };
 
 use crate::{
@@ -41,7 +41,6 @@ fn week_section<'a>(
 
 fn display_items(app: &App) -> Element<'_, Message> {
     let now = Local::now();
-    let year = now.year() as u16;
     let season = AnimeSeason::try_from(now.month() as u8).expect("month should map to a season");
 
     let week = get_current_week_order();
@@ -50,17 +49,7 @@ fn display_items(app: &App) -> Element<'_, Message> {
         Some(week_section(app, week, animes))
     });
 
-    scrollable(
-        column![
-            row![
-                button("Load").on_press(Message::UpdateAnime(year, season)),
-                text(format!("季節: {}", season)),
-            ]
-            .spacing(4),
-            column(items)
-        ]
-        .spacing(10),
-    )
-    .width(Length::Fill)
-    .into()
+    scrollable(column![text(format!("季節: {}", season)), column(items)].spacing(10))
+        .width(Length::Fill)
+        .into()
 }

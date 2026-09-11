@@ -1,21 +1,36 @@
 [workspace]
 resolver = "3"
 members = [
-    "anilist-core",
-    "anilist-iced",
-    "anilist-source",
-    "anilist-youranimes",
+  "anilist-core",
+  "anilist-ffi",
+  "anilist-iced",
+  "anilist-source",
+  "anilist-youranimes",
 ]
 
 [workspace.package]
 version = "0.0.1"
 edition = "2024"
-authors = ["Muisnow <me@muisnowdevs.one>"]
+
+[workspace.dependencies]
+anilist-core = { path = "anilist-core" }
+anilist-source = { path = "anilist-source" }
+anilist-youranimes = { path = "anilist-youranimes" }
+chrono = "0.4.45"
+chrono-tz = "0.10.4"
+iana-time-zone = "0.1"
+iced = { version = "0.14.0", features = ["image", "tokio"] }
+open = "5.4.4"
+reqwest = "0.13.5"
+scraper = "0.27.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+tokio = { version = "1.53.1", features = ["full"] }
 
 [profile.release]
 opt-level = 3
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
 debug = false
+strip = true
+lto = true
+panic = "abort"
+codegen-units = 1

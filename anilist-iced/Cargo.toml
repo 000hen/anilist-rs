@@ -4,11 +4,11 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-anilist-core = { path = "../anilist-core" }
-anilist-source = { path = "../anilist-source" }
-anilist-youranimes = { path = "../anilist-youranimes" }
-reqwest = "0.13.4"
-chrono = "0.4.45"
-tokio = { version = "1.53.1", features = ["full"] }
-iced = { version = "0.14.0", features = ["tokio", "image"] }
-open = "5.3"
+anilist-core.workspace = true
+anilist-source.workspace = true
+anilist-youranimes.workspace = true
+chrono.workspace = true
+iced.workspace = true
+open.workspace = true
+reqwest.workspace = true
+tokio.workspace = true

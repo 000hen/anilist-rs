@@ -6,7 +6,7 @@ use anilist_youranimes::fetcher::YourAnimesFetcher;
 use iced::{
     Element, Size, Subscription, Task,
     widget::{center, container},
-    window::{self, Settings},
+    window::{self, Settings, icon},
 };
 use reqwest::Client;
 
@@ -17,6 +17,8 @@ use crate::{
     },
     window::{detail, list},
 };
+
+static ICON_BYTES: &[u8] = include_bytes!("./image/icon.png");
 
 #[derive(Debug, Clone)]
 pub enum WindowType {
@@ -64,13 +66,21 @@ pub struct App {
     windows: HashMap<window::Id, WindowType>,
 }
 
+fn create_window_settings() -> Settings {
+    let icon = icon::from_file_data(ICON_BYTES, None).expect("failed to load app icon");
+    Settings {
+        icon: Some(icon),
+        ..Default::default()
+    }
+}
+
 impl App {
     pub fn new() -> (Self, Task<Message>) {
         let client = Client::new();
         let source = YourAnimesFetcher::new(client.clone());
         let imager = Imager::new(client.clone());
 
-        let (id, task) = window::open(Settings::default());
+        let (id, task) = window::open(create_window_settings());
         (
             Self {
                 main_window: id,
@@ -124,7 +134,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::Anime(anime::Message::Clicked(anime_id)) => {
             let (_, task) = window::open(Settings {
                 size: Size::new(700.0, 900.0),
-                ..Default::default()
+                ..create_window_settings()
             });
 
             task.map(move |id| Message::OpenWindow {

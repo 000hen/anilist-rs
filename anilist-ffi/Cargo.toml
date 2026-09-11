@@ -4,8 +4,18 @@ version.workspace = true
 edition.workspace = true
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib", "staticlib"]
 name = "anilist"
+
+[dependencies]
+anilist-core.workspace = true
+anilist-source.workspace = true
+anilist-youranimes.workspace = true
+chrono.workspace = true
+reqwest.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+uniffi.workspace = true
 
 [build-dependencies]
 cbindgen.workspace = true

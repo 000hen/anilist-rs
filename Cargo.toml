@@ -6,6 +6,7 @@ members = [
   "anilist-iced",
   "anilist-source",
   "anilist-youranimes",
+  "uniffi-bindgen",
 ]
 
 [workspace.package]
@@ -29,7 +30,9 @@ reqwest = "0.13.5"
 scraper = "0.27.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
+thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["full"] }
+uniffi = { version = "0.32.0", features = ["cli", "tokio"] }
 
 [profile.release]
 opt-level = 3

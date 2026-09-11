@@ -1,6 +1,7 @@
 use anilist_core::{anime::Anime, season::AnimeSeason};
 use anilist_source::{AnimeSource, SourceError};
 use reqwest::{Client, StatusCode};
+use scraper::Html;
 
 use crate::{
     ID_PREFIX,
@@ -22,19 +23,14 @@ impl YourAnimesFetcher {
         Self { fetcher: client }
     }
 
-    async fn fetch_list(
-        &self,
-        year: u16,
-        season: AnimeSeason,
-    ) -> Result<Vec<Anime>, YourAnimesError> {
-        let url = parse_url(year, season);
+    async fn fetch_and_get_html(&self, url: &str) -> Result<String, YourAnimesError> {
         let response =
             self.fetcher
-                .get(&url)
+                .get(url)
                 .send()
                 .await
                 .map_err(|source| YourAnimesError::Request {
-                    url: url.clone(),
+                    url: url.to_owned(),
                     source,
                 })?;
 
@@ -43,8 +39,21 @@ impl YourAnimesFetcher {
         let content = response
             .text()
             .await
-            .map_err(|source| YourAnimesError::ResponseBody { url, source })?;
+            .map_err(|source| YourAnimesError::ResponseBody {
+                url: url.to_owned(),
+                source,
+            })?;
 
+        Ok(content)
+    }
+
+    async fn fetch_list(
+        &self,
+        year: u16,
+        season: AnimeSeason,
+    ) -> Result<Vec<Anime>, YourAnimesError> {
+        let url = parse_url(year, season);
+        let content = self.fetch_and_get_html(&url).await?;
         parse_list(&content)
     }
 
@@ -57,22 +66,7 @@ impl YourAnimesFetcher {
             })?;
 
         let url = format!("{DETAIL_URL}{parsed_id}");
-        let response =
-            self.fetcher
-                .get(&url)
-                .send()
-                .await
-                .map_err(|source| YourAnimesError::Request {
-                    url: url.clone(),
-                    source,
-                })?;
-
-        ensure_successful_status(&url, response.status())?;
-
-        let content = response
-            .text()
-            .await
-            .map_err(|source| YourAnimesError::ResponseBody { url, source })?;
+        let content = self.fetch_and_get_html(&url).await?;
 
         parse_detail(&content)
     }

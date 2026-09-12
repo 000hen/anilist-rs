@@ -14,7 +14,6 @@ anilist-youranimes.workspace = true
 chrono.workspace = true
 reqwest.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
 uniffi.workspace = true
 
 [build-dependencies]

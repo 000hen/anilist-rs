@@ -136,6 +136,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "anilist-nextjs"
+version = "0.0.1"
+dependencies = [
+ "base64 0.22.1",
+ "scraper",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "anilist-source"
 version = "0.0.1"
 dependencies = [
@@ -147,6 +158,7 @@ name = "anilist-youranimes"
 version = "0.0.1"
 dependencies = [
  "anilist-core",
+ "anilist-nextjs",
  "anilist-source",
  "async-stream",
  "chrono",

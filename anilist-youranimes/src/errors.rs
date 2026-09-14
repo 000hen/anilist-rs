@@ -22,10 +22,17 @@ pub enum YourAnimesError {
     InvalidResponse {
         context: &'static str,
     },
+    NextJs(anilist_nextjs::ParseError),
     AnimeConversion {
         anime_id: String,
         source: ZoneConversionError,
     },
+}
+
+impl From<anilist_nextjs::ParseError> for YourAnimesError {
+    fn from(source: anilist_nextjs::ParseError) -> Self {
+        Self::NextJs(source)
+    }
 }
 
 impl From<YourAnimesError> for SourceError {
@@ -44,6 +51,9 @@ impl From<YourAnimesError> for SourceError {
             YourAnimesError::AnimeConversion { anime_id, source } => {
                 SourceError::AnimeConversion { anime_id, source }
             }
+            YourAnimesError::NextJs(source) => SourceError::InvalidResponse {
+                context: source.context(),
+            },
         }
     }
 }

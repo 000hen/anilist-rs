@@ -4,6 +4,7 @@ members = [
   "anilist-core",
   "anilist-ffi",
   "anilist-iced",
+  "anilist-nextjs",
   "anilist-source",
   "anilist-youranimes",
   "uniffi-bindgen",
@@ -15,6 +16,7 @@ edition = "2024"
 
 [workspace.dependencies]
 anilist-core = { path = "anilist-core" }
+anilist-nextjs = { path = "anilist-nextjs" }
 anilist-source = { path = "anilist-source" }
 anilist-youranimes = { path = "anilist-youranimes" }
 async-stream = "0.3"

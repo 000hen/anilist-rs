@@ -1,26 +1,11 @@
 use anilist_core::anime::Anime;
+use anilist_nextjs::NextJsData;
 use chrono::Local;
-use scraper::Html;
 
-use crate::{
-    errors::YourAnimesError,
-    format::anime::AnimeInformation,
-    parser::nextjs::{JsonPath, NextJsExtractor},
-    system_timezone,
-};
-
-const MATCH_FORMAT: &str = "{\\\"anime\\\":";
-const ANIME_LIST_PATH: &[JsonPath<'static>] = &[
-    JsonPath::Index(1),
-    JsonPath::Index(3),
-    JsonPath::Key("anime"),
-];
+use crate::{errors::YourAnimesError, format::anime::AnimeInformation, system_timezone};
 
 pub fn parse_detail(content: &str) -> Result<Anime, YourAnimesError> {
-    let document = Html::parse_document(content);
-
-    let parsed: AnimeInformation =
-        NextJsExtractor::extract(&document, MATCH_FORMAT, ANIME_LIST_PATH)?;
+    let parsed: AnimeInformation = NextJsData::parse(content)?.deserialize("/1/3/anime")?;
 
     let timezone = system_timezone();
     let reference_date = Local::now().date_naive();

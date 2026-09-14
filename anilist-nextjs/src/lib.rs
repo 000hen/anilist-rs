@@ -6,17 +6,22 @@
 //! not a React runtime. Binary typed-array records are not supported.
 
 mod error;
+mod ffi;
 mod flight;
 
 pub use error::ParseError;
+pub use ffi::{NextJsError, deserialize_nextjs};
 pub use flight::FlightRecord;
 
 use scraper::{Html, Selector};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
+uniffi::setup_scaffolding!();
+
 /// Hydration data from the Pages Router and/or App Router.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NextJsData {
     pub next_data: Option<Value>,
     /// Records in wire order, preserving repeated and absent IDs.

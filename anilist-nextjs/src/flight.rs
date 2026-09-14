@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use crate::{ParseError, error};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct FlightRecord {
     /// Hexadecimal wire ID converted to an integer; hints may have no ID.
     pub id: Option<u64>,

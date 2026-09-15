@@ -9,10 +9,12 @@ name = "anilist"
 
 [dependencies]
 anilist-core.workspace = true
+anilist-nextjs.workspace = true
 anilist-source.workspace = true
 anilist-youranimes.workspace = true
 chrono.workspace = true
 reqwest.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 uniffi.workspace = true
 

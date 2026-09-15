@@ -1,8 +1,10 @@
 mod error;
 mod model;
+mod nextjs;
 
 pub use error::*;
 pub use model::*;
+pub use nextjs::{NextJsError, deserialize_nextjs};
 
 use std::{ffi::CString, os::raw::c_char, str::FromStr, sync::OnceLock};
 

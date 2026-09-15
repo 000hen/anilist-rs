@@ -6,22 +6,17 @@
 //! not a React runtime. Binary typed-array records are not supported.
 
 mod error;
-mod ffi;
 mod flight;
 
 pub use error::ParseError;
-pub use ffi::{NextJsError, deserialize_nextjs};
 pub use flight::FlightRecord;
 
-use scraper::{Html, Selector};
+use html5tokenizer::{NaiveParser, Token};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-uniffi::setup_scaffolding!();
-
 /// Hydration data from the Pages Router and/or App Router.
-#[derive(Debug, Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct NextJsData {
     pub next_data: Option<Value>,
     /// Records in wire order, preserving repeated and absent IDs.
@@ -30,19 +25,31 @@ pub struct NextJsData {
 
 impl NextJsData {
     pub fn parse(html: &str) -> Result<Self, ParseError> {
-        Self::from_document(&Html::parse_document(html))
-    }
-
-    pub fn from_document(document: &Html) -> Result<Self, ParseError> {
-        let selector = Selector::parse("script").expect("valid static selector");
         let mut next_data = None;
         let mut bytes = Vec::new();
         let mut has_flight = false;
-        for element in document.select(&selector) {
-            let script = element.inner_html();
-            if element.value().attr("id") == Some("__NEXT_DATA__") {
+        // Reading a &str is infallible. The tokenizer handles script-data and
+        // raw-text states without constructing a DOM or decoding script text.
+        let mut tokens = NaiveParser::new(html).flatten();
+        while let Some(token) = tokens.next() {
+            let Token::StartTag(tag) = token else {
+                continue;
+            };
+            if tag.name != "script" {
+                continue;
+            }
+            let mut script = String::new();
+            for token in tokens.by_ref() {
+                match token {
+                    Token::Char(c) => script.push(c),
+                    Token::EndTag(tag) if tag.name == "script" => break,
+                    Token::EndOfFile => break,
+                    _ => {}
+                }
+            }
+            if tag.attributes.get("id") == Some("__NEXT_DATA__") {
                 next_data = Some(error::json(&script, "Next.js __NEXT_DATA__")?);
-            } else if element.value().attr("src").is_none() {
+            } else if tag.attributes.get("src").is_none() {
                 has_flight |= flight::read_script(&script, &mut bytes)?;
             }
         }

@@ -1,4 +1,4 @@
-use anilist_nextjs::deserialize_nextjs;
+use anilist::deserialize_nextjs;
 use serde_json::{Value, json};
 
 #[test]

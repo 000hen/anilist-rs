@@ -3,13 +3,9 @@ name = "anilist-nextjs"
 version.workspace = true
 edition.workspace = true
 
-[lib]
-crate-type = ["cdylib", "rlib", "staticlib"]
-
 [dependencies]
 base64 = "0.22"
-scraper.workspace = true
+html5tokenizer = "0.5.2"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-uniffi.workspace = true

@@ -14,8 +14,7 @@ futures.workspace = true
 futures-timer.workspace = true
 iana-time-zone.workspace = true
 reqwest.workspace = true
-scraper.workspace = true
-serde.workspace = true
+serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 
 [dev-dependencies]

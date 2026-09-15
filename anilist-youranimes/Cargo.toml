@@ -6,7 +6,7 @@ edition.workspace = true
 [dependencies]
 anilist-core.workspace = true
 anilist-nextjs.workspace = true
-anilist-source = { workspace = true, optional = true }
+anilist-source.workspace = true
 chrono.workspace = true
 chrono-tz = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
@@ -15,16 +15,12 @@ iana-time-zone = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [features]
-default = ["http", "system-timezone"]
-system-timezone = ["anilist-core/timezone", "anilist-core/clock", "dep:chrono-tz", "dep:iana-time-zone"]
-http = [
-  "dep:anilist-source",
-  "dep:futures",
-  "dep:futures-timer",
-  "dep:reqwest",
-]
+default = []
+http = ["dep:futures", "dep:futures-timer", "dep:reqwest"]
+system-timezone = ["anilist-core/clock", "anilist-core/timezone", "dep:chrono-tz", "dep:iana-time-zone"]

@@ -1,18 +1,16 @@
-#[cfg(feature = "http")]
-mod http;
-#[cfg(feature = "http")]
-pub use http::{anilist_detail, anilist_list, anilist_search};
-mod youranimes;
-pub use youranimes::{your_animes_parse_detail, your_animes_parse_list, your_animes_parse_search};
 mod error;
 mod model;
+pub mod parser;
+
+#[cfg(feature = "http")]
+pub mod http;
 
 pub use anilist_nextjs_ffi::{NextJsError, deserialize_nextjs};
 pub use error::*;
 pub use model::*;
 anilist_nextjs_ffi::uniffi_reexport_scaffolding!();
 
-use std::{ffi::CString, os::raw::c_char, str::FromStr};
+use std::os::raw::c_char;
 
 #[cfg(feature = "system-timezone")]
 use anilist_core::get_current_week_order;
@@ -20,10 +18,10 @@ use anilist_core::get_current_week_order;
 uniffi::setup_scaffolding!();
 
 #[unsafe(no_mangle)]
-pub fn version() -> *const c_char {
-    let ver = env!("CARGO_PKG_VERSION");
-    let cstr = CString::from_str(&ver).expect("Cannot format version into CString");
-    cstr.as_ptr()
+pub extern "C" fn version() -> *const c_char {
+    concat!(env!("CARGO_PKG_VERSION"), "\0")
+        .as_ptr()
+        .cast()
 }
 
 #[cfg(feature = "system-timezone")]

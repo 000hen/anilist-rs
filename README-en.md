@@ -19,22 +19,30 @@ A desktop anime seasonal broadcast timetable app built with Rust and [Iced](http
 anilist-rs
 ├── anilist-core          # Core data models & timezone conversion logic
 │                           Anime, AnimeTime, AnimeSeason, Minute, ScheduleDay
-├── anilist-source        # AnimeSource trait abstraction & error types
+├── anilist-source        # AnimeParser / AnimeSource traits & shared errors
 ├── anilist-nextjs        # Lightweight Next.js hydration / Flight parser
 ├── anilist-nextjs-ffi    # Independently buildable Next.js UniFFI
-├── anilist-ffi           # All parser FFI with optional HTTP and system timezone
-├── anilist-youranimes    # youranimes.tw source implementation (HTML / RSC JSON parsing)
+├── anilist-ffi           # Dynamic parser/fetcher FFI with optional HTTP, source and timezone support
+├── anilist-youranimes    # youranimes.tw parser/fetcher implementation
 └── anilist-iced          # Iced GUI multi-window desktop application
 ```
 
 ## 🛠️ Tech Stack
+
+### Rust / Kotlin FFI
+
+The standalone Next.js FFI can be built independently. For a YourAnimes
+parser-only build without HTTP/Tokio or system timezone support, use
+`--no-default-features --features youranimes`. The default build includes
+YourAnimes, HTTP fetching, and system timezone support. See the
+[FFI guide](docs/ffi.md) for build variants, API contracts, and Kotlin migration.
 
 | Category       | Crate                                                   |
 | -------------- | ------------------------------------------------------- |
 | Language       | Rust (Edition 2024)                                     |
 | GUI Framework  | [Iced](https://iced.rs) 0.14 (daemon multi-window mode) |
 | HTTP Client    | reqwest                                                 |
-| HTML Parsing   | html5gum (no DOM)                                        |
+| HTML Parsing   | html5gum (no DOM)                                       |
 | Timezone       | chrono, chrono-tz, iana-time-zone                       |
 | Async Runtime  | tokio                                                   |
 | Serialization  | serde / serde_json                                      |
@@ -62,21 +70,21 @@ cargo build --release
 
 ## 🏗️ Architecture
 
-For standalone Next.js FFI, parser-only builds without HTTP/Tokio, and default
-HTTP-enabled builds, see the [FFI guide](docs/ffi.md). It includes API contracts
-and the generated Kotlin binding migration.
-
 ```
 anilist-core (data models & timezone logic)
     ↑
-anilist-source (AnimeSource trait interface)
+anilist-source (AnimeParser / AnimeSource trait interfaces)
     ↑
-anilist-youranimes (youranimes.tw scraper implementation)
+anilist-youranimes (youranimes.tw parser / fetcher implementation)
     ↑
 anilist-iced (multi-window GUI application)
 ```
 
-The project uses a trait-based abstraction. The `AnimeSource` trait defines an async `list(year, season)` method that returns all anime for a given season. Implement this trait to plug in a new data source.
+The project uses trait-based source abstraction. `AnimeParser` provides synchronous
+`parse_list`, `parse_search`, and `parse_detail` operations. `AnimeSource` provides
+asynchronous `list`, `search`, and `detail` operations. The FFI constructs a
+`NativeAnimeParser` or `NativeAnimeFetcher` dynamically from a source ID, so a
+new source does not need its own parallel FFI API surface.
 
 Timezone conversion is handled by `AnimeTime::to_zone()` in `anilist-core`, which correctly accounts for day and weekday boundary crossings.
 

@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use super::{detail::parse_detail, list::parse_list};
+use super::{detail::parse_detail, list::parse_list, search::parse_search};
 
 fn anime() -> Value {
     json!({
@@ -56,4 +56,18 @@ fn missing_hydration_and_wrong_anime_shape_return_errors() {
         ))
         .is_err()
     );
+}
+
+#[test]
+fn search_returns_prefixed_ids_without_detail_hydration() {
+    let result = parse_search(r#"{"result":[{"_id":"1108"},{"_id":"42"}]}"#).unwrap();
+
+    assert_eq!(result, ["youranimes:1108", "youranimes:42"]);
+}
+
+#[test]
+fn search_parse_errors_identify_the_response_stage() {
+    let error = parse_search("not json").unwrap_err();
+
+    assert!(error.to_string().contains("YourAnimes search response"));
 }

@@ -124,6 +124,7 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
                     .map(|anime| {
                         let week = anime
                             .on_air_time
+                            .as_ref()
                             .map(|d| ScheduleDay::Weekday(d.week))
                             .unwrap_or(ScheduleDay::Unknown);
 

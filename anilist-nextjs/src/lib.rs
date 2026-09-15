@@ -11,7 +11,7 @@ mod flight;
 pub use error::ParseError;
 pub use flight::FlightRecord;
 
-use html5tokenizer::{NaiveParser, Token};
+use html5gum::{DefaultEmitter, Token, Tokenizer};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
@@ -30,26 +30,34 @@ impl NextJsData {
         let mut has_flight = false;
         // Reading a &str is infallible. The tokenizer handles script-data and
         // raw-text states without constructing a DOM or decoding script text.
-        let mut tokens = NaiveParser::new(html).flatten();
+        let mut emitter = DefaultEmitter::default();
+        emitter.naively_switch_states(true);
+        let mut tokens = Tokenizer::new_with_emitter(html, emitter).flatten();
         while let Some(token) = tokens.next() {
             let Token::StartTag(tag) = token else {
                 continue;
             };
-            if tag.name != "script" {
+            if tag.name != b"script" {
                 continue;
             }
             let mut script = String::new();
             for token in tokens.by_ref() {
                 match token {
-                    Token::Char(c) => script.push(c),
-                    Token::EndTag(tag) if tag.name == "script" => break,
-                    Token::EndOfFile => break,
+                    Token::String(text) => script.push_str(
+                        std::str::from_utf8(text.value.as_ref())
+                            .expect("a tokenizer reading UTF-8 input must emit UTF-8 text"),
+                    ),
+                    Token::EndTag(tag) if tag.name == b"script" => break,
                     _ => {}
                 }
             }
-            if tag.attributes.get("id") == Some("__NEXT_DATA__") {
+            if tag
+                .attributes
+                .get(b"id".as_slice())
+                .is_some_and(|attribute| attribute.value == b"__NEXT_DATA__")
+            {
                 next_data = Some(error::json(&script, "Next.js __NEXT_DATA__")?);
-            } else if tag.attributes.get("src").is_none() {
+            } else if !tag.attributes.contains_key(b"src".as_slice()) {
                 has_flight |= flight::read_script(&script, &mut bytes)?;
             }
         }

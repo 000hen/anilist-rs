@@ -8,11 +8,10 @@ name = "anilist"
 path = "src/main.rs"
 
 [dependencies]
-anilist-core.workspace = true
+anilist-core = { workspace = true, features = ["clock"] }
 anilist-source.workspace = true
-anilist-youranimes.workspace = true
-chrono.workspace = true
+anilist-youranimes = { workspace = true, features = ["http", "system-timezone"] }
+chrono = { workspace = true, features = ["clock"] }
 iced.workspace = true
 open.workspace = true
 reqwest.workspace = true
-tokio.workspace = true

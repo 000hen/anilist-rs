@@ -104,7 +104,6 @@ version = "0.0.1"
 dependencies = [
  "chrono",
  "chrono-tz",
- "reqwest",
 ]
 
 [[package]]
@@ -112,7 +111,7 @@ name = "anilist-ffi"
 version = "0.0.1"
 dependencies = [
  "anilist-core",
- "anilist-nextjs",
+ "anilist-nextjs-ffi",
  "anilist-source",
  "anilist-youranimes",
  "cbindgen",
@@ -134,7 +133,6 @@ dependencies = [
  "iced",
  "open",
  "reqwest",
- "tokio",
 ]
 
 [[package]]
@@ -142,10 +140,20 @@ name = "anilist-nextjs"
 version = "0.0.1"
 dependencies = [
  "base64 0.22.1",
- "html5tokenizer",
+ "html5gum",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "anilist-nextjs-ffi"
+version = "0.0.1"
+dependencies = [
+ "anilist-nextjs",
+ "serde_json",
+ "thiserror 2.0.20",
+ "uniffi",
 ]
 
 [[package]]
@@ -162,7 +170,6 @@ dependencies = [
  "anilist-core",
  "anilist-nextjs",
  "anilist-source",
- "async-stream",
  "chrono",
  "chrono-tz",
  "futures",
@@ -461,28 +468,6 @@ dependencies = [
  "signal-hook-registry",
  "slab",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "async-stream"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b5a71a6f37880a80d1d7f19efd781e4b5de42c88f0722cc13bcb6cc2cfe8476"
-dependencies = [
- "async-stream-impl",
- "futures-core",
- "pin-project-lite",
-]
-
-[[package]]
-name = "async-stream-impl"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
 ]
 
 [[package]]
@@ -869,9 +854,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327"
 dependencies = [
  "iana-time-zone",
- "js-sys",
  "num-traits",
- "wasm-bindgen",
  "windows-link",
 ]
 
@@ -1884,10 +1867,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 
 [[package]]
-name = "html5tokenizer"
-version = "0.5.2"
+name = "html5gum"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f0913f97f19bf45cdef63d2cb153c388ef57267984d7a15a4ef678e0da29afe"
+checksum = "428502d3ec1742c35e015871aef742bc4722a9acfcb616b8ff79b519922e1c36"
 
 [[package]]
 name = "http"
@@ -4790,9 +4773,7 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
- "parking_lot",
  "pin-project-lite",
- "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",

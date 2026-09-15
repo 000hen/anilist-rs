@@ -5,6 +5,7 @@ members = [
   "anilist-ffi",
   "anilist-iced",
   "anilist-nextjs",
+  "anilist-nextjs-ffi",
   "anilist-source",
   "anilist-youranimes",
   "uniffi-bindgen",
@@ -15,13 +16,13 @@ version = "0.0.1"
 edition = "2024"
 
 [workspace.dependencies]
-anilist-core = { path = "anilist-core" }
+anilist-core = { path = "anilist-core", default-features = false }
 anilist-nextjs = { path = "anilist-nextjs" }
+anilist-nextjs-ffi = { path = "anilist-nextjs-ffi" }
 anilist-source = { path = "anilist-source" }
-anilist-youranimes = { path = "anilist-youranimes" }
-async-stream = "0.3"
+anilist-youranimes = { path = "anilist-youranimes", default-features = false }
 cbindgen = "0.29"
-chrono = "0.4.45"
+chrono = { version = "0.4.45", default-features = false, features = ["std"] }
 chrono-tz = "0.10.4"
 futures = "0.3.34"
 futures-timer = "3"
@@ -32,8 +33,7 @@ reqwest = { version = "0.13.5", default-features = false, features = ["rustls"] 
 serde = "1.0.229"
 serde_json = "1.0.151"
 thiserror = "2.0.20"
-tokio = { version = "1.53.1", features = ["full"] }
-uniffi = { version = "0.32.0", default-features = false, features = ["tokio"] }
+uniffi = { version = "0.32.0", default-features = false }
 
 [profile.release]
 opt-level = "z"

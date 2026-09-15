@@ -40,7 +40,7 @@ impl Display for Anime {
         writeln!(f, "|   ID: {}", self.id)?;
         writeln!(f, "|   Adult: {}", if self.is_adult { "yes" } else { "no" })?;
 
-        match self.on_air_time {
+        match &self.on_air_time {
             Some(time) => match time.minute {
                 Some(minute) => writeln!(
                     f,

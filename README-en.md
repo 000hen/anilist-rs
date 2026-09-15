@@ -20,6 +20,9 @@ anilist-rs
 ├── anilist-core          # Core data models & timezone conversion logic
 │                           Anime, AnimeTime, AnimeSeason, Minute, ScheduleDay
 ├── anilist-source        # AnimeSource trait abstraction & error types
+├── anilist-nextjs        # Lightweight Next.js hydration / Flight parser
+├── anilist-nextjs-ffi    # Independently buildable Next.js UniFFI
+├── anilist-ffi           # All parser FFI with optional HTTP and system timezone
 ├── anilist-youranimes    # youranimes.tw source implementation (HTML / RSC JSON parsing)
 └── anilist-iced          # Iced GUI multi-window desktop application
 ```
@@ -31,7 +34,7 @@ anilist-rs
 | Language       | Rust (Edition 2024)                                     |
 | GUI Framework  | [Iced](https://iced.rs) 0.14 (daemon multi-window mode) |
 | HTTP Client    | reqwest                                                 |
-| HTML Parsing   | scraper                                                 |
+| HTML Parsing   | html5gum (no DOM)                                        |
 | Timezone       | chrono, chrono-tz, iana-time-zone                       |
 | Async Runtime  | tokio                                                   |
 | Serialization  | serde / serde_json                                      |
@@ -58,6 +61,10 @@ cargo build --release
 ```
 
 ## 🏗️ Architecture
+
+For standalone Next.js FFI, parser-only builds without HTTP/Tokio, and default
+HTTP-enabled builds, see the [FFI guide](docs/ffi.md). It includes API contracts
+and the generated Kotlin binding migration.
 
 ```
 anilist-core (data models & timezone logic)

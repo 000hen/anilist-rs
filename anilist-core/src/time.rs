@@ -1,14 +1,16 @@
 use std::{cmp::Ordering, error::Error, fmt};
 
-use chrono::{
-    Datelike, Duration, NaiveDate, NaiveTime, TimeZone, Timelike, Weekday, offset::LocalResult,
-};
+use chrono::Weekday;
+#[cfg(feature = "timezone")]
+use chrono::{Datelike, Duration, NaiveDate, NaiveTime, TimeZone, Timelike, offset::LocalResult};
+#[cfg(feature = "timezone")]
 use chrono_tz::Tz;
 
 use crate::minute::Minute;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ZoneConversionError {
+    UnknownTimeZone,
     AmbiguousLocalTime,
     NonexistentLocalTime,
 }
@@ -16,6 +18,7 @@ pub enum ZoneConversionError {
 impl fmt::Display for ZoneConversionError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::UnknownTimeZone => formatter.write_str("unknown IANA timezone"),
             Self::AmbiguousLocalTime => formatter.write_str("local time is ambiguous"),
             Self::NonexistentLocalTime => formatter.write_str("local time does not exist"),
         }
@@ -24,11 +27,12 @@ impl fmt::Display for ZoneConversionError {
 
 impl Error for ZoneConversionError {}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AnimeTime {
     pub week: Weekday,
     pub minute: Option<Minute>,
-    pub zone: Tz,
+    /// IANA timezone name; keeping the identifier needs no timezone database.
+    pub zone: String,
 }
 
 impl AnimeTime {
@@ -37,12 +41,13 @@ impl AnimeTime {
             .map(|minute| self.week.num_days_from_monday() as u16 * 1440 + minute.get())
     }
 
+    #[cfg(feature = "timezone")]
     pub fn to_zone(self, zone: Tz, reference: NaiveDate) -> Result<Self, ZoneConversionError> {
         let Some(minute) = self.minute else {
             return Ok(Self {
                 week: self.week,
                 minute: None,
-                zone: zone,
+                zone: zone.name().to_owned(),
             });
         };
 
@@ -53,7 +58,11 @@ impl AnimeTime {
                 .expect("validate minute must produce a valid time");
 
         let source_naive = source_date.and_time(source_time);
-        let source = match self.zone.from_local_datetime(&source_naive) {
+        let source_zone: Tz = self
+            .zone
+            .parse()
+            .map_err(|_| ZoneConversionError::UnknownTimeZone)?;
+        let source = match source_zone.from_local_datetime(&source_naive) {
             LocalResult::Single(value) => value,
             LocalResult::Ambiguous(_, _) => {
                 return Err(ZoneConversionError::AmbiguousLocalTime);
@@ -69,7 +78,7 @@ impl AnimeTime {
         Ok(Self {
             week: target.weekday(),
             minute: target_minute,
-            zone: zone,
+            zone: zone.name().to_owned(),
         })
     }
 
@@ -102,5 +111,71 @@ impl Ord for AnimeTime {
 impl PartialOrd for AnimeTime {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+#[cfg(all(test, feature = "timezone"))]
+mod tests {
+    use chrono::{NaiveDate, Weekday};
+    use chrono_tz::Asia::{Taipei, Tokyo};
+
+    use super::{AnimeTime, ZoneConversionError};
+    use crate::minute::Minute;
+
+    fn anime_time(week: Weekday, minute: Option<u16>, zone: &str) -> AnimeTime {
+        AnimeTime {
+            week,
+            minute: minute.and_then(Minute::new),
+            zone: zone.to_owned(),
+        }
+    }
+
+    #[test]
+    fn converts_tokyo_monday_after_midnight_to_taipei_sunday() {
+        let converted = anime_time(Weekday::Mon, Some(30), "Asia/Tokyo")
+            .to_zone(Taipei, NaiveDate::from_ymd_opt(2026, 7, 6).unwrap())
+            .unwrap();
+
+        assert_eq!(converted.week, Weekday::Sun);
+        assert_eq!(converted.minute.map(Minute::get), Some(23 * 60 + 30));
+        assert_eq!(converted.zone, "Asia/Taipei");
+    }
+
+    #[test]
+    fn rejects_nonexistent_new_york_dst_local_time() {
+        let error = anime_time(Weekday::Sun, Some(2 * 60 + 30), "America/New_York")
+            .to_zone(Tokyo, NaiveDate::from_ymd_opt(2026, 3, 8).unwrap())
+            .unwrap_err();
+
+        assert_eq!(error, ZoneConversionError::NonexistentLocalTime);
+    }
+
+    #[test]
+    fn rejects_ambiguous_new_york_dst_local_time() {
+        let error = anime_time(Weekday::Sun, Some(60 + 30), "America/New_York")
+            .to_zone(Tokyo, NaiveDate::from_ymd_opt(2026, 11, 1).unwrap())
+            .unwrap_err();
+
+        assert_eq!(error, ZoneConversionError::AmbiguousLocalTime);
+    }
+
+    #[test]
+    fn rejects_unknown_source_timezone() {
+        let error = anime_time(Weekday::Mon, Some(30), "Unknown/Timezone")
+            .to_zone(Tokyo, NaiveDate::from_ymd_opt(2026, 7, 6).unwrap())
+            .unwrap_err();
+
+        assert_eq!(error, ZoneConversionError::UnknownTimeZone);
+    }
+
+    #[test]
+    fn retains_unknown_minutes_without_needing_a_source_timezone() {
+        let converted = anime_time(Weekday::Mon, None, "Unknown/Timezone")
+            .to_zone(Taipei, NaiveDate::from_ymd_opt(2026, 7, 6).unwrap())
+            .unwrap();
+
+        assert_eq!(converted.week, Weekday::Mon);
+        assert_eq!(converted.minute, None);
+        assert_eq!(converted.zone, "Asia/Taipei");
     }
 }

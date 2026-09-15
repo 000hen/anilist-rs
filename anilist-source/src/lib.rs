@@ -5,6 +5,9 @@ use anilist_core::{anime::Anime, season::AnimeSeason, time::ZoneConversionError}
 #[derive(Debug)]
 pub enum SourceError {
     Unavailable,
+    TimezoneUnavailable {
+        source: ZoneConversionError,
+    },
     InvalidResponse {
         context: &'static str,
     },
@@ -20,6 +23,9 @@ impl fmt::Display for SourceError {
             Self::Unavailable => {
                 write!(formatter, "the source is unavailable this time")
             }
+            Self::TimezoneUnavailable { source } => {
+                write!(formatter, "system timezone is unavailable: {source}")
+            }
             Self::InvalidResponse { context } => {
                 write!(formatter, "invalid source response: {context}")
             }
@@ -33,7 +39,9 @@ impl fmt::Display for SourceError {
 impl Error for SourceError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::AnimeConversion { source, .. } => Some(source),
+            Self::AnimeConversion { source, .. } | Self::TimezoneUnavailable { source } => {
+                Some(source)
+            }
             Self::Unavailable { .. } | Self::InvalidResponse { .. } => None,
         }
     }

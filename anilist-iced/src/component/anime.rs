@@ -27,7 +27,7 @@ where
         None => container("").into(),
     };
 
-    let minute = match anime.on_air_time.and_then(|time| time.minute) {
+    let minute = match anime.on_air_time.as_ref().and_then(|time| time.minute) {
         Some(time) => format!("@{}", time),
         None => "時間未定".to_owned(),
     };

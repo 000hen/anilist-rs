@@ -3,10 +3,9 @@ use std::collections::{HashMap, HashSet};
 use anilist_core::{
     anime::{Anime, AnimeSite, AnimeStreaming},
     minute::Minute,
-    time::{AnimeTime, ZoneConversionError},
+    time::AnimeTime,
 };
-use chrono::{NaiveDate, Weekday};
-use chrono_tz::{Asia::Tokyo, Tz};
+use chrono::Weekday;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
@@ -65,20 +64,12 @@ pub struct AnimeInformation {
 }
 
 impl AnimeInformation {
-    pub fn into_anime(
-        self,
-        target_zone: Tz,
-        reference_date: NaiveDate,
-    ) -> Result<Anime, ZoneConversionError> {
-        let on_air_time = self
-            .day_of_week
-            .map(|week| AnimeTime {
-                week,
-                minute: self.time_in_day,
-                zone: Tokyo,
-            })
-            .map(|time| time.to_zone(target_zone, reference_date))
-            .transpose()?;
+    pub fn into_anime(self) -> Anime {
+        let on_air_time = self.day_of_week.map(|week| AnimeTime {
+            week,
+            minute: self.time_in_day,
+            zone: "Asia/Tokyo".to_owned(),
+        });
 
         let is_adult = self.adult_content || !self.adultstreaming.is_empty();
         let mut seen_streams = HashSet::new();
@@ -94,7 +85,7 @@ impl AnimeInformation {
             })
             .collect();
 
-        Ok(Anime {
+        Anime {
             id: format!("{}:{}", ID_PREFIX, self.id),
             name: self.name,
             description: self.description,
@@ -113,7 +104,7 @@ impl AnimeInformation {
                     url: link.url,
                 })
                 .collect(),
-        })
+        }
     }
 }
 
@@ -285,8 +276,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use chrono::NaiveDate;
-    use chrono_tz::Asia::Tokyo;
     use serde_json::{Value, json};
 
     use super::*;
@@ -360,18 +349,15 @@ mod tests {
         let information: AnimeInformation =
             serde_json::from_value(anime_json(json!(1), json!("2026-07-06 12:30"))).unwrap();
 
-        let anime = information
-            .into_anime(Tokyo, NaiveDate::from_ymd_opt(2026, 7, 6).unwrap())
-            .unwrap();
+        let anime = information.into_anime();
 
         assert_eq!(anime.id, "youranimes:anime-id");
         assert_eq!(anime.on_air_time.unwrap().week, Weekday::Mon);
         assert!(anime.is_adult);
         assert_eq!(anime.cast, ["Actor"]);
-        assert_eq!(
-            anime.genres.clone().sort(),
-            ["Action", "Fantasy", "Comedy"].sort()
-        );
+        let mut genres = anime.genres;
+        genres.sort();
+        assert_eq!(genres, ["Action", "Comedy", "Fantasy"]);
         assert_eq!(anime.streaming.len(), 1);
         assert_eq!(anime.streaming[0].name, "prime");
         assert_eq!(
@@ -405,21 +391,16 @@ mod tests {
     }
 
     #[test]
-    fn converts_tokyo_time_across_the_previous_day_boundary() {
+    fn preserves_tokyo_time_for_host_owned_conversion() {
         let information: AnimeInformation =
             serde_json::from_value(anime_json(json!(1), json!("2026-07-06 00:30"))).unwrap();
 
-        let anime = information
-            .into_anime(
-                chrono_tz::Asia::Taipei,
-                NaiveDate::from_ymd_opt(2026, 7, 6).unwrap(),
-            )
-            .unwrap();
+        let anime = information.into_anime();
         let time = anime.on_air_time.unwrap();
 
-        assert_eq!(time.week, Weekday::Sun);
-        assert_eq!(time.minute.map(Minute::get), Some(23 * 60 + 30));
-        assert_eq!(time.zone, chrono_tz::Asia::Taipei);
+        assert_eq!(time.week, Weekday::Mon);
+        assert_eq!(time.minute.map(Minute::get), Some(30));
+        assert_eq!(time.zone, "Asia/Tokyo");
     }
 
     #[test]

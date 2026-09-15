@@ -9,14 +9,19 @@ name = "anilist"
 
 [dependencies]
 anilist-core.workspace = true
-anilist-nextjs.workspace = true
-anilist-source.workspace = true
+anilist-nextjs-ffi.workspace = true
+anilist-source = { workspace = true, optional = true }
 anilist-youranimes.workspace = true
 chrono.workspace = true
-reqwest.workspace = true
+reqwest = { workspace = true, optional = true }
 serde_json.workspace = true
 thiserror.workspace = true
 uniffi.workspace = true
 
 [build-dependencies]
 cbindgen.workspace = true
+
+[features]
+default = ["http", "system-timezone"]
+system-timezone = ["anilist-core/clock", "anilist-youranimes/system-timezone"]
+http = ["anilist-youranimes/http", "dep:anilist-source", "dep:reqwest", "uniffi/tokio"]

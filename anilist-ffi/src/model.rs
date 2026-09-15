@@ -1,10 +1,6 @@
 use anilist_core::{
     ScheduleDay as CoreScheduleDay,
-    anime::{
-        Anime as CoreAnime,
-        AnimeSite as CoreAnimeSite,
-        AnimeStreaming as CoreAnimeStreaming,
-    },
+    anime::{Anime as CoreAnime, AnimeSite as CoreAnimeSite, AnimeStreaming as CoreAnimeStreaming},
     minute::Minute as CoreMinute,
     season::AnimeSeason as CoreAnimeSeason,
     time::AnimeTime as CoreAnimeTime,
@@ -36,6 +32,20 @@ impl From<CoreWeekday> for Weekday {
     }
 }
 
+impl From<Weekday> for CoreWeekday {
+    fn from(value: Weekday) -> Self {
+        match value {
+            Weekday::Monday => Self::Mon,
+            Weekday::Tuesday => Self::Tue,
+            Weekday::Wednesday => Self::Wed,
+            Weekday::Thursday => Self::Thu,
+            Weekday::Friday => Self::Fri,
+            Weekday::Saturday => Self::Sat,
+            Weekday::Sunday => Self::Sun,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
 pub struct Minute {
     pub value: u16,
@@ -43,9 +53,7 @@ pub struct Minute {
 
 impl From<CoreMinute> for Minute {
     fn from(value: CoreMinute) -> Self {
-        Self {
-            value: value.get(),
-        }
+        Self { value: value.get() }
     }
 }
 
@@ -88,9 +96,7 @@ pub enum ScheduleDay {
 impl From<CoreScheduleDay> for ScheduleDay {
     fn from(value: CoreScheduleDay) -> Self {
         match value {
-            CoreScheduleDay::Weekday(day) => Self::Weekday {
-                day: day.into(),
-            },
+            CoreScheduleDay::Weekday(day) => Self::Weekday { day: day.into() },
             CoreScheduleDay::Unknown => Self::Unknown,
         }
     }
@@ -108,7 +114,7 @@ impl From<CoreAnimeTime> for AnimeTime {
         Self {
             week: value.week.into(),
             minute: value.minute.map(Into::into),
-            zone: value.zone.to_string(),
+            zone: value.zone,
         }
     }
 }
@@ -180,17 +186,9 @@ impl From<CoreAnime> for Anime {
             cast: value.cast,
             genres: value.genres,
 
-            streaming: value
-                .streaming
-                .into_iter()
-                .map(Into::into)
-                .collect(),
+            streaming: value.streaming.into_iter().map(Into::into).collect(),
 
-            sites: value
-                .site
-                .into_iter()
-                .map(Into::into)
-                .collect(),
+            sites: value.site.into_iter().map(Into::into).collect(),
         }
     }
 }

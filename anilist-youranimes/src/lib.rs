@@ -1,23 +1,32 @@
+#[cfg(feature = "system-timezone")]
 use chrono_tz::Tz;
 
 mod errors;
+#[cfg(feature = "http")]
 pub mod fetcher;
 mod format;
 mod parser;
 
+#[cfg(feature = "http")]
+pub use errors::YourAnimesError;
+pub use errors::YourAnimesParseError;
+pub use parser::{detail::parse_detail, list::parse_list, search::parse_search};
+
 const ID_PREFIX: &str = "youranimes";
 
-pub fn system_timezone() -> Tz {
+#[cfg(feature = "system-timezone")]
+pub fn system_timezone() -> Result<Tz, anilist_core::time::ZoneConversionError> {
     iana_time_zone::get_timezone()
-        .expect("system timezone should be available")
-        .parse()
-        .expect("system timezone should be a valid IANA timezone")
+        .ok()
+        .and_then(|name| name.parse().ok())
+        .ok_or(anilist_core::time::ZoneConversionError::UnknownTimeZone)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "http"))]
 mod tests {
     use anilist_core::season::AnimeSeason;
     use anilist_source::AnimeSource;
+    #[cfg(feature = "system-timezone")]
     use chrono::{Datelike, Local};
     use reqwest::Client;
 
@@ -39,6 +48,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "system-timezone")]
     async fn test_fetching_latest() {
         let local = Local::now();
         let season = AnimeSeason::try_from(local.month() as u8).unwrap();

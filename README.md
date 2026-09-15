@@ -20,18 +20,26 @@ anilist-rs
 ├── anilist-core          # 核心資料模型與時區轉換邏輯
 │                           Anime、AnimeTime、AnimeSeason、Minute、ScheduleDay
 ├── anilist-source        # AnimeSource trait 抽象層與錯誤類型
+├── anilist-nextjs        # 輕量 Next.js hydration / Flight 解析器
+├── anilist-nextjs-ffi    # 可獨立建置的 Next.js UniFFI
+├── anilist-ffi           # 完整解析 FFI，可選 HTTP 與系統時區功能
 ├── anilist-youranimes    # youranimes.tw 資料來源實作（HTML / RSC JSON 解析）
 └── anilist-iced          # Iced GUI 多視窗桌面應用程式
 ```
 
 ## 🛠️ 技術棧
 
+### Rust / Kotlin FFI
+
+可獨立建置 Next.js FFI，或使用 `--no-default-features` 建置不含 HTTP / Tokio 的完整解析器。
+預設仍提供 HTTP 抓取功能。建置方式、Kotlin 綁定遷移與解析 API 請見 [FFI 說明](docs/ffi.md)。
+
 | 類別       | 套件                                              |
 | ---------- | ------------------------------------------------- |
 | 語言       | Rust（Edition 2024）                              |
 | GUI 框架   | [Iced](https://iced.rs) 0.14（daemon 多視窗模式） |
 | HTTP 請求  | reqwest                                           |
-| HTML 解析  | scraper                                           |
+| HTML 解析  | html5gum（不建立 DOM）                             |
 | 時區處理   | chrono、chrono-tz、iana-time-zone                 |
 | 非同步執行 | tokio                                             |
 | 序列化     | serde / serde_json                                |

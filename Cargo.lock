@@ -112,7 +112,6 @@ name = "anilist-ffi"
 version = "0.0.1"
 dependencies = [
  "anilist-core",
- "anilist-nextjs-ffi",
  "anilist-source",
  "anilist-youranimes",
  "chrono",

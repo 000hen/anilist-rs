@@ -5,10 +5,8 @@ pub mod parser;
 #[cfg(feature = "http")]
 pub mod http;
 
-pub use anilist_nextjs_ffi::{NextJsError, deserialize_nextjs};
 pub use error::*;
 pub use model::*;
-anilist_nextjs_ffi::uniffi_reexport_scaffolding!();
 
 use std::os::raw::c_char;
 
@@ -19,9 +17,7 @@ uniffi::setup_scaffolding!();
 
 #[unsafe(no_mangle)]
 pub extern "C" fn version() -> *const c_char {
-    concat!(env!("CARGO_PKG_VERSION"), "\0")
-        .as_ptr()
-        .cast()
+    concat!(env!("CARGO_PKG_VERSION"), "\0").as_ptr().cast()
 }
 
 #[cfg(feature = "system-timezone")]

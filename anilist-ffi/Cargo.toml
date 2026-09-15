@@ -9,18 +9,13 @@ name = "anilist"
 
 [dependencies]
 anilist-core.workspace = true
-anilist-nextjs-ffi.workspace = true
 anilist-source.workspace = true
 anilist-youranimes = { workspace = true, optional = true }
 chrono.workspace = true
+reqwest = { workspace = true, optional = true }
 serde_json.workspace = true
 thiserror.workspace = true
 uniffi.workspace = true
-
-reqwest = {
-  workspace = true,
-  optional = true,
-}
 
 [features]
 default = ["http", "system-timezone", "youranimes"]

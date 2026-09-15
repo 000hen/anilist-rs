@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, error::Error, fmt};
+use std::cmp::Ordering;
 
 use chrono::Weekday;
 #[cfg(feature = "timezone")]
@@ -8,24 +8,17 @@ use chrono_tz::Tz;
 
 use crate::minute::Minute;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum ZoneConversionError {
+    #[error("unknown time zone")]
     UnknownTimeZone,
+
+    #[error("local time is ambiguous")]
     AmbiguousLocalTime,
+
+    #[error("local time does not exist")]
     NonexistentLocalTime,
 }
-
-impl fmt::Display for ZoneConversionError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::UnknownTimeZone => formatter.write_str("unknown IANA timezone"),
-            Self::AmbiguousLocalTime => formatter.write_str("local time is ambiguous"),
-            Self::NonexistentLocalTime => formatter.write_str("local time does not exist"),
-        }
-    }
-}
-
-impl Error for ZoneConversionError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AnimeTime {

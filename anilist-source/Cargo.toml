@@ -5,3 +5,4 @@ edition.workspace = true
 
 [dependencies]
 anilist-core.workspace = true
+thiserror.workspace = true

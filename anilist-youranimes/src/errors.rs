@@ -3,7 +3,7 @@ use std::{error::Error, fmt};
 #[cfg(feature = "http")]
 use anilist_core::time::ZoneConversionError;
 #[cfg(feature = "http")]
-use anilist_source::SourceError;
+use anilist_source::error::{ParseError, SourceError};
 
 #[derive(Debug)]
 pub enum YourAnimesParseError {
@@ -110,25 +110,38 @@ impl Error for YourAnimesError {
 #[cfg(feature = "http")]
 impl From<YourAnimesError> for SourceError {
     fn from(error: YourAnimesError) -> Self {
-        println!("Got error while parsing: {:?}", error);
         match error {
             YourAnimesError::Request { .. }
             | YourAnimesError::UnexpectedStatus { .. }
-            | YourAnimesError::ResponseBody { .. } => SourceError::Unavailable,
+            | YourAnimesError::ResponseBody { .. } => Self::Unavailable,
 
-            YourAnimesError::Parse(
-                YourAnimesParseError::Json { context, .. }
-                | YourAnimesParseError::InvalidResponse { context },
-            ) => SourceError::InvalidResponse { context },
-            YourAnimesError::AnimeConversion { anime_id, source } => {
-                SourceError::AnimeConversion { anime_id, source }
+            YourAnimesError::Parse(source) => Self::Parse(source.into()),
+            YourAnimesError::AnimeConversion { anime_id, source } => Self::AnimeConversion {
+                anime_id,
+                source: Box::new(source),
+            },
+
+            YourAnimesError::Timezone(source) => Self::TimezoneUnavailable { source },
+        }
+    }
+}
+
+impl From<YourAnimesParseError> for ParseError {
+    fn from(error: YourAnimesParseError) -> Self {
+        match error {
+            YourAnimesParseError::Json { context, source } => ParseError::Decode {
+                context,
+                source: Box::new(source),
+            },
+
+            YourAnimesParseError::InvalidResponse { context } => {
+                ParseError::InvalidFormat { context }
             }
-            YourAnimesError::Timezone(source) => SourceError::TimezoneUnavailable { source },
-            YourAnimesError::Parse(YourAnimesParseError::NextJs(source)) => {
-                SourceError::InvalidResponse {
-                    context: source.context(),
-                }
-            }
+
+            YourAnimesParseError::NextJs(source) => ParseError::Decode {
+                context: source.context(),
+                source: Box::new(source),
+            },
         }
     }
 }

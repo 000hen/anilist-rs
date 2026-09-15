@@ -5,12 +5,11 @@ mod errors;
 #[cfg(feature = "http")]
 pub mod fetcher;
 mod format;
-mod parser;
+pub mod parser;
 
 #[cfg(feature = "http")]
 pub use errors::YourAnimesError;
 pub use errors::YourAnimesParseError;
-pub use parser::{detail::parse_detail, list::parse_list, search::parse_search};
 
 const ID_PREFIX: &str = "youranimes";
 

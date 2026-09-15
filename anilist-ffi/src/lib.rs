@@ -2,10 +2,9 @@
 mod http;
 #[cfg(feature = "http")]
 pub use http::{anilist_detail, anilist_list, anilist_search};
-mod youranimes;
-pub use youranimes::{your_animes_parse_detail, your_animes_parse_list, your_animes_parse_search};
 mod error;
 mod model;
+pub mod parser;
 
 pub use anilist_nextjs_ffi::{NextJsError, deserialize_nextjs};
 pub use error::*;

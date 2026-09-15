@@ -19,10 +19,10 @@
 anilist-rs
 ├── anilist-core          # 核心資料模型與時區轉換邏輯
 │                           Anime、AnimeTime、AnimeSeason、Minute、ScheduleDay
-├── anilist-source        # AnimeSource trait 抽象層與錯誤類型
+├── anilist-source        # AnimeParser / AnimeSource trait 抽象層與錯誤類型
 ├── anilist-nextjs        # 輕量 Next.js hydration / Flight 解析器
 ├── anilist-nextjs-ffi    # 可獨立建置的 Next.js UniFFI
-├── anilist-ffi           # 完整解析 FFI，可選 HTTP 與系統時區功能
+├── anilist-ffi           # 動態 parser / fetcher FFI，可選 HTTP、來源與系統時區功能
 ├── anilist-youranimes    # youranimes.tw 資料來源實作（HTML / RSC JSON 解析）
 └── anilist-iced          # Iced GUI 多視窗桌面應用程式
 ```
@@ -31,15 +31,17 @@ anilist-rs
 
 ### Rust / Kotlin FFI
 
-可獨立建置 Next.js FFI，或使用 `--no-default-features` 建置不含 HTTP / Tokio 的完整解析器。
-預設仍提供 HTTP 抓取功能。建置方式、Kotlin 綁定遷移與解析 API 請見 [FFI 說明](docs/ffi.md)。
+可獨立建置 Next.js FFI；若只需要 YourAnimes parser，可使用
+`--no-default-features --features youranimes`，避免打包 HTTP / Tokio 與系統時區資料。
+預設則包含 YourAnimes、HTTP 與系統時區支援。建置方式、Kotlin 綁定遷移與解析 API 請見
+[FFI 說明](docs/ffi.md)。
 
 | 類別       | 套件                                              |
 | ---------- | ------------------------------------------------- |
 | 語言       | Rust（Edition 2024）                              |
 | GUI 框架   | [Iced](https://iced.rs) 0.14（daemon 多視窗模式） |
 | HTTP 請求  | reqwest                                           |
-| HTML 解析  | html5gum（不建立 DOM）                             |
+| HTML 解析  | html5gum（不建立 DOM）                            |
 | 時區處理   | chrono、chrono-tz、iana-time-zone                 |
 | 非同步執行 | tokio                                             |
 | 序列化     | serde / serde_json                                |
@@ -70,14 +72,16 @@ cargo build --release
 ```
 anilist-core（資料模型 & 時區邏輯）
     ↑
-anilist-source（AnimeSource trait 介面）
+anilist-source（AnimeParser / AnimeSource trait 介面）
     ↑
-anilist-youranimes（youranimes.tw 爬蟲實作）
+anilist-youranimes（youranimes.tw parser / fetcher 實作）
     ↑
 anilist-iced（多視窗 GUI 應用程式）
 ```
 
-核心採用 trait 抽象設計，`AnimeSource` trait 定義了 `list(year, season)` 非同步方法，回傳該季所有動畫資料。只要實作此 trait，即可輕鬆接入新的動畫資料來源。
+核心採用 trait 抽象設計。`AnimeParser` 定義同步的 `parse_list`、`parse_search`、`parse_detail`；
+`AnimeSource` 則定義非同步的 `list`、`search`、`detail`。FFI 透過 source ID 動態建立對應的
+`NativeAnimeParser` 或 `NativeAnimeFetcher`，因此新增來源時不需要為每個來源建立另一套 FFI API。
 
 時區轉換由 `anilist-core` 的 `AnimeTime::to_zone()` 負責，能正確處理跨日、跨星期的邊界情況。
 

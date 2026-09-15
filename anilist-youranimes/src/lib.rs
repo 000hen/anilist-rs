@@ -7,8 +7,6 @@ pub mod fetcher;
 mod format;
 pub mod parser;
 
-#[cfg(feature = "http")]
-pub use errors::YourAnimesError;
 pub use errors::YourAnimesParseError;
 
 const ID_PREFIX: &str = "youranimes";

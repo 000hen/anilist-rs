@@ -1,40 +1,65 @@
-use crate::{AnilistError, Anime, AnimeSeason};
+use std::sync::Arc;
+
 use anilist_source::AnimeSource;
+
+#[cfg(feature = "youranimes")]
 use anilist_youranimes::fetcher::YourAnimesFetcher;
-use std::sync::OnceLock;
 
-static YOUR_ANIMES: OnceLock<YourAnimesFetcher> = OnceLock::new();
+use crate::{AnilistError, Anime, AnimeSeason};
 
-fn your_animes() -> &'static YourAnimesFetcher {
-    YOUR_ANIMES.get_or_init(|| YourAnimesFetcher::new(reqwest::Client::new()))
+#[derive(uniffi::Object)]
+pub struct NativeAnimeFetcher {
+    fetcher: Box<dyn AnimeSource>,
 }
 
-#[uniffi::export(async_runtime = "tokio")]
-pub async fn anilist_list(year: u16, season: AnimeSeason) -> Result<Vec<Anime>, AnilistError> {
-    let animes = your_animes()
-        .list(year, season.into())
-        .await
-        .map_err(AnilistError::from)?;
+#[uniffi::export]
+impl NativeAnimeFetcher {
+    #[uniffi::constructor]
+    pub fn new(source_id: String) -> Result<Arc<Self>, AnilistError> {
+        let fetcher = create_fetcher(&source_id)?;
 
-    Ok(animes.into_iter().map(Anime::from).collect())
+        Ok(Arc::new(Self { fetcher }))
+    }
+
+    pub fn source_id(&self) -> String {
+        self.fetcher.source_id().to_owned()
+    }
+
+    #[uniffi::method(async_runtime = "tokio")]
+    pub async fn list(&self, year: u16, season: AnimeSeason) -> Result<Vec<Anime>, AnilistError> {
+        self.fetcher
+            .list(year, season.into())
+            .await
+            .map(|items| items.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    #[uniffi::method(async_runtime = "tokio")]
+    pub async fn search(&self, keyword: String) -> Result<Vec<Anime>, AnilistError> {
+        self.fetcher
+            .search(&keyword)
+            .await
+            .map(|items| items.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    #[uniffi::method(async_runtime = "tokio")]
+    pub async fn detail(&self, id: String) -> Result<Anime, AnilistError> {
+        self.fetcher
+            .detail(&id)
+            .await
+            .map(Into::into)
+            .map_err(Into::into)
+    }
 }
 
-#[uniffi::export(async_runtime = "tokio")]
-pub async fn anilist_search(keyword: String) -> Result<Vec<Anime>, AnilistError> {
-    let animes = your_animes()
-        .search(&keyword)
-        .await
-        .map_err(AnilistError::from)?;
+fn create_fetcher(source_id: &str) -> Result<Box<dyn AnimeSource>, AnilistError> {
+    match source_id {
+        #[cfg(feature = "youranimes")]
+        "youranimes" => Ok(Box::new(YourAnimesFetcher::new(reqwest::Client::new()))),
 
-    Ok(animes.into_iter().map(Anime::from).collect())
-}
-
-#[uniffi::export(async_runtime = "tokio")]
-pub async fn anilist_detail(id: String) -> Result<Anime, AnilistError> {
-    let anime = your_animes()
-        .detail(&id)
-        .await
-        .map_err(AnilistError::from)?;
-
-    Ok(Anime::from(anime))
+        _ => Err(AnilistError::UnsupportedSource {
+            source_id: source_id.to_owned(),
+        }),
+    }
 }

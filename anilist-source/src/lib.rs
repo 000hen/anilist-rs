@@ -1,17 +1,21 @@
+use std::pin::Pin;
+
 use anilist_core::{anime::Anime, season::AnimeSeason};
 
 use crate::error::{ParseError, SourceError};
 
 pub mod error;
 
-#[allow(async_fn_in_trait)]
-pub trait AnimeSource {
-    async fn list(&self, year: u16, season: AnimeSeason) -> Result<Vec<Anime>, SourceError>;
-    async fn search(&self, keyword: &str) -> Result<Vec<Anime>, SourceError>;
-    async fn detail(&self, id: &str) -> Result<Anime, SourceError>;
+pub type SourceFuture<'a, T> = Pin<Box<dyn Future<Output = Result<T, SourceError>> + Send + 'a>>;
+
+pub trait AnimeSource: Send + Sync {
+    fn source_id(&self) -> &'static str;
+    fn list(&self, year: u16, season: AnimeSeason) -> SourceFuture<'_, Vec<Anime>>;
+    fn search<'a>(&'a self, keyword: &'a str) -> SourceFuture<'a, Vec<Anime>>;
+    fn detail<'a>(&'a self, id: &'a str) -> SourceFuture<'a, Anime>;
 }
 
-pub trait AnimeParser {
+pub trait AnimeParser: Send + Sync {
     fn source_id(&self) -> &'static str;
     fn parse_list(&self, content: &str) -> Result<Vec<Anime>, ParseError>;
     fn parse_detail(&self, content: &str) -> Result<Anime, ParseError>;

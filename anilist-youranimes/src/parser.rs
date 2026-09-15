@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anilist_core::anime::Anime;
 use anilist_nextjs::NextJsData;
 use anilist_source::{AnimeParser, error::ParseError};
@@ -13,10 +15,17 @@ fn parse_detail(content: &str) -> Result<Anime, YourAnimesParseError> {
 }
 
 fn parse_list(content: &str) -> Result<Vec<Anime>, YourAnimesParseError> {
-    let parsed: Vec<AnimeInformation> = NextJsData::parse(content)?.deserialize("/3/animes")?;
+    let data = NextJsData::parse(content)?;
+    let parsed: Vec<AnimeInformation> = data.deserialize("/3/animes")?;
+    let vendors = match data.deserialize::<HashMap<String, String>>("/3/nameMap") {
+        Ok(vendors) => vendors,
+        Err(anilist_nextjs::ParseError::MissingPath { .. }) => HashMap::new(),
+        Err(error) => return Err(error.into()),
+    };
 
     Ok(parsed
         .into_iter()
+        .map(|anime| anime.resolve_vendors(&vendors))
         .map(AnimeInformation::into_anime)
         .collect())
 }
@@ -137,5 +146,40 @@ mod tests {
         let error = parse_search("not json").unwrap_err();
 
         assert!(error.to_string().contains("YourAnimes search response"));
+    }
+
+    #[test]
+    fn list_resolves_streaming_vendor_names() {
+        let mut anime = anime();
+
+        anime["streaming"] = json!([
+            {
+                "title": "Bahamut",
+                "url": "https://ani.gamer.com.tw/animeVideo.php?sn=1",
+                "vendor": "gamer"
+            }
+        ]);
+
+        let content = html(json!([
+            "$",
+            "$L1",
+            null,
+            {
+                "animes": [anime],
+                "nameMap": {
+                    "gamer": "巴哈姆特動畫瘋"
+                }
+            }
+        ]));
+
+        let result = parse_list(&content).unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].streaming.len(), 1);
+        assert_eq!(result[0].streaming[0].name, "巴哈姆特動畫瘋");
+        assert_eq!(
+            result[0].streaming[0].logo,
+            "https://d28s5ztqvkii64.cloudfront.net/images/gamer_icon.webp"
+        );
     }
 }

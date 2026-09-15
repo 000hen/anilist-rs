@@ -64,6 +64,18 @@ pub struct AnimeInformation {
 }
 
 impl AnimeInformation {
+    pub fn resolve_vendors(mut self, vendors: &HashMap<String, String>) -> Self {
+        for streaming in self
+            .streaming
+            .iter_mut()
+            .chain(self.adultstreaming.iter_mut())
+        {
+            streaming.resolve_vendor(vendors);
+        }
+
+        self
+    }
+
     pub fn into_anime(self) -> Anime {
         let on_air_time = self.day_of_week.map(|week| AnimeTime {
             week,
@@ -73,6 +85,7 @@ impl AnimeInformation {
 
         let is_adult = self.adult_content || !self.adultstreaming.is_empty();
         let mut seen_streams = HashSet::new();
+
         let streaming = self
             .streaming
             .into_iter()
@@ -169,6 +182,16 @@ pub struct Streaming {
     pub has_zh_cn_subtitle: Option<bool>,
     pub has_zh_hk_subtitle: Option<bool>,
     pub ad_url: Option<String>,
+}
+
+impl Streaming {
+    fn resolve_vendor(&mut self, vendors: &HashMap<String, String>) {
+        let Some(name) = vendors.get(&self.vendor) else {
+            return;
+        };
+
+        self.vendor_local_name.clone_from(name);
+    }
 }
 
 #[derive(Deserialize)]

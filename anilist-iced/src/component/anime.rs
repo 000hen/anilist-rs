@@ -1,12 +1,15 @@
 use anilist_core::anime::Anime;
 use iced::{
-    Element, Font, Length, Padding,
+    Element, Font, Length,
     font::Weight,
     mouse::Interaction,
-    widget::{center_x, column, container, mouse_area, text},
+    widget::{center_x, column, container, mouse_area, row, text},
 };
 
-use crate::component::imager::{Imager, ImagerMessage};
+use crate::component::{
+    badge::badge,
+    imager::{Imager, ImagerMessage},
+};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -32,14 +35,14 @@ where
         None => "時間未定".to_owned(),
     };
 
+    let mut header_badges = row![badge(text(minute)),].spacing(2);
+    if anime.is_adult {
+        header_badges = header_badges.push(badge(text("成人內容")).style(container::danger));
+    }
+
     let content = column![
         image,
-        center_x(
-            container(text(minute))
-                .style(container::rounded_box)
-                .padding(Padding::from([2, 4]))
-        )
-        .width(Length::Fill),
+        center_x(header_badges).width(Length::Fill),
         text(&anime.name)
             .center()
             .width(Length::Fill)

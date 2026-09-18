@@ -19,7 +19,7 @@ use crate::{
     window::{detail, list},
 };
 
-static ICON_BYTES: &[u8] = include_bytes!("./image/icon.png");
+static ICON_BYTES: &[u8] = include_bytes!("./image/icon.webp");
 
 #[derive(Debug, Clone)]
 pub enum WindowType {

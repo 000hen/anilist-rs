@@ -15,3 +15,6 @@ chrono = { workspace = true, features = ["clock"] }
 iced.workspace = true
 open.workspace = true
 reqwest.workspace = true
+
+[build-dependencies]
+winresource.workspace = true

@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 
 use anilist_core::anime::Anime;
+use anilist_core::season::AnimeSeason;
 use anilist_nextjs::NextJsData;
-use anilist_source::{AnimeParser, error::ParseError};
+use anilist_source::{
+    AnimeParser, AnimeSource, HttpMethod, HttpRequest,
+    error::{ParseError, SourceError},
+};
 
 use crate::{
     ID_PREFIX, YourAnimesParseError,
@@ -70,6 +74,83 @@ impl AnimeParser for YourAnimeParser {
     fn parse_search(&self, content: &str) -> Result<Vec<String>, ParseError> {
         parse_search(content).map_err(Into::into)
     }
+}
+
+impl AnimeSource for YourAnimeParser {
+    fn list_request(&self, year: u16, season: AnimeSeason) -> Result<HttpRequest, SourceError> {
+        Ok(HttpRequest {
+            method: HttpMethod::Get,
+            url: list_url(year, season),
+            headers: Vec::new(),
+            body: None,
+        })
+    }
+
+    fn search_request(&self, keyword: &str) -> Result<HttpRequest, SourceError> {
+        Ok(HttpRequest {
+            method: HttpMethod::Get,
+            url: search_url(keyword),
+            headers: Vec::new(),
+            body: None,
+        })
+    }
+
+    fn detail_request(&self, id: &str) -> Result<HttpRequest, SourceError> {
+        let id = id
+            .strip_prefix(&format!("{ID_PREFIX}:"))
+            .ok_or(ParseError::InvalidResponse {
+                context: "unexpected YourAnimes anime id",
+            })?;
+
+        if id.is_empty() || !id.bytes().all(|byte| byte.is_ascii_digit()) {
+            return Err(ParseError::InvalidResponse {
+                context: "invalid YourAnimes anime id",
+            }
+            .into());
+        }
+        Ok(HttpRequest {
+            method: HttpMethod::Get,
+            url: detail_url(id),
+            headers: Vec::new(),
+            body: None,
+        })
+    }
+}
+
+pub(crate) const LIST_URL: &str = "https://youranimes.tw/bangumi/";
+pub(crate) const DETAIL_URL: &str = "https://youranimes.tw/animes/";
+pub(crate) const API_BASE_URL: &str = "https://youranimes.tw/api/v1/";
+
+pub(crate) fn list_url(year: u16, season: AnimeSeason) -> String {
+    let month = match season {
+        AnimeSeason::Winter => "01",
+        AnimeSeason::Spring => "04",
+        AnimeSeason::Summer => "07",
+        AnimeSeason::Fall => "10",
+    };
+
+    format!("{LIST_URL}{year}{month}")
+}
+
+pub(crate) fn detail_url(id: &str) -> String {
+    format!("{DETAIL_URL}{id}")
+}
+
+pub(crate) fn search_url(keyword: &str) -> String {
+    // Encode the value, not the entire URL, so keywords cannot introduce query parameters.
+    let keyword: String = keyword
+        .bytes()
+        .map(|byte| {
+            if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
+                char::from(byte).to_string()
+            } else {
+                format!("%{byte:02X}")
+            }
+        })
+        .collect();
+    format!(
+        "{API_BASE_URL}animes?tk={keyword}&tags=&page=1&size=100&orderOption=-1&streaming=0&adult=1"
+    )
 }
 
 #[cfg(test)]
@@ -146,6 +227,34 @@ mod tests {
         let error = parse_search("not json").unwrap_err();
 
         assert!(error.to_string().contains("YourAnimes search response"));
+    }
+
+    #[test]
+    fn client_requests_keep_youranimes_protocol_details_in_rust() {
+        let parser = YourAnimeParser::new();
+
+        assert_eq!(
+            parser.list_request(2026, AnimeSeason::Summer).unwrap().url,
+            "https://youranimes.tw/bangumi/202607"
+        );
+        assert_eq!(
+            parser.search_request("女僕").unwrap().url,
+            "https://youranimes.tw/api/v1/animes?tk=%E5%A5%B3%E5%83%95&tags=&page=1&size=100&orderOption=-1&streaming=0&adult=1"
+        );
+        assert_eq!(
+            parser.detail_request("youranimes:1108").unwrap().url,
+            "https://youranimes.tw/animes/1108"
+        );
+        assert!(parser.detail_request("1108").is_err());
+        assert!(parser.detail_request("youranimes:").is_err());
+        assert!(parser.detail_request("youranimes:../42").is_err());
+        assert!(
+            parser
+                .search_request("a &b=1#中")
+                .unwrap()
+                .url
+                .contains("tk=a%20%26b%3D1%23%E4%B8%AD&tags=")
+        );
     }
 
     #[test]

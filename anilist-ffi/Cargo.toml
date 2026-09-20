@@ -18,7 +18,8 @@ thiserror.workspace = true
 uniffi.workspace = true
 
 [features]
-default = ["http", "system-timezone", "youranimes"]
+default = ["http", "system-timezone", "all-sources"]
+all-sources = ["youranimes"]
 http = ["anilist-youranimes?/http", "dep:reqwest", "uniffi/tokio"]
 system-timezone = ["anilist-core/clock", "anilist-youranimes?/system-timezone"]
 youranimes = ["dep:anilist-youranimes"]

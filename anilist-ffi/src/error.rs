@@ -8,37 +8,36 @@ pub enum AnilistError {
     #[error("the source is unavailable")]
     SourceUnavailable,
 
-    #[error("invalid source response: {message}")]
-    InvalidResponse { message: String },
+    #[error("invalid source response: {detail}")]
+    InvalidResponse { detail: String },
 
-    #[error("system timezone is unavailable: {message}")]
-    TimezoneUnavailable { message: String },
+    #[error("system timezone is unavailable: {detail}")]
+    TimezoneUnavailable { detail: String },
 
-    #[error("failed to convert anime {anime_id}: {message}")]
-    AnimeConversion { anime_id: String, message: String },
+    #[error("failed to convert anime {anime_id}: {detail}")]
+    AnimeConversion { anime_id: String, detail: String },
 }
 
 impl From<ParseError> for AnilistError {
     fn from(error: ParseError) -> Self {
         Self::InvalidResponse {
-            message: error.to_string(),
+            detail: error.to_string(),
         }
     }
 }
 
-#[cfg(feature = "http")]
 impl From<SourceError> for AnilistError {
     fn from(error: SourceError) -> Self {
         match error {
             SourceError::Unavailable => Self::SourceUnavailable,
             SourceError::Parse(source) => source.into(),
             SourceError::TimezoneUnavailable { source } => Self::TimezoneUnavailable {
-                message: source.to_string(),
+                detail: source.to_string(),
             },
 
             SourceError::AnimeConversion { anime_id, source } => Self::AnimeConversion {
                 anime_id,
-                message: source.to_string(),
+                detail: source.to_string(),
             },
         }
     }

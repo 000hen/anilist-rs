@@ -22,5 +22,5 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = []
-http = ["dep:futures", "dep:futures-timer", "dep:reqwest"]
+http = ["anilist-source/http", "dep:futures", "dep:futures-timer", "dep:reqwest"]
 system-timezone = ["anilist-core/clock", "anilist-core/timezone", "dep:chrono-tz", "dep:iana-time-zone"]

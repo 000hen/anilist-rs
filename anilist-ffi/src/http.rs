@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anilist_source::AnimeSource;
+use anilist_source::AnimeFetcher;
 
 #[cfg(feature = "youranimes")]
 use anilist_youranimes::fetcher::YourAnimesFetcher;
@@ -9,7 +9,7 @@ use crate::{AnilistError, Anime, AnimeSeason};
 
 #[derive(uniffi::Object)]
 pub struct NativeAnimeFetcher {
-    fetcher: Box<dyn AnimeSource>,
+    fetcher: Box<dyn AnimeFetcher>,
 }
 
 #[uniffi::export]
@@ -53,7 +53,7 @@ impl NativeAnimeFetcher {
     }
 }
 
-fn create_fetcher(source_id: &str) -> Result<Box<dyn AnimeSource>, AnilistError> {
+fn create_fetcher(source_id: &str) -> Result<Box<dyn AnimeFetcher>, AnilistError> {
     match source_id {
         #[cfg(feature = "youranimes")]
         "youranimes" => Ok(Box::new(YourAnimesFetcher::new(reqwest::Client::new()))),

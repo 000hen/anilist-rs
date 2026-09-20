@@ -5,10 +5,12 @@ use anilist_core::{anime::Anime, season::AnimeSeason};
 use crate::error::{ParseError, SourceError};
 
 pub mod error;
+pub mod http;
+pub use http::{HttpClient, HttpHeader, HttpMethod, HttpRequest};
 
 pub type SourceFuture<'a, T> = Pin<Box<dyn Future<Output = Result<T, SourceError>> + Send + 'a>>;
 
-pub trait AnimeSource: Send + Sync {
+pub trait AnimeFetcher: Send + Sync {
     fn source_id(&self) -> &'static str;
     fn list(&self, year: u16, season: AnimeSeason) -> SourceFuture<'_, Vec<Anime>>;
     fn search<'a>(&'a self, keyword: &'a str) -> SourceFuture<'a, Vec<Anime>>;
@@ -20,4 +22,11 @@ pub trait AnimeParser: Send + Sync {
     fn parse_list(&self, content: &str) -> Result<Vec<Anime>, ParseError>;
     fn parse_detail(&self, content: &str) -> Result<Anime, ParseError>;
     fn parse_search(&self, content: &str) -> Result<Vec<String>, ParseError>;
+}
+
+/// A source protocol definition whose transport is owned by its caller.
+pub trait AnimeSource: AnimeParser {
+    fn list_request(&self, year: u16, season: AnimeSeason) -> Result<HttpRequest, SourceError>;
+    fn search_request(&self, keyword: &str) -> Result<HttpRequest, SourceError>;
+    fn detail_request(&self, id: &str) -> Result<HttpRequest, SourceError>;
 }

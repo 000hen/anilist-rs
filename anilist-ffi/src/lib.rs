@@ -1,6 +1,7 @@
 mod error;
 mod model;
 pub mod parser;
+pub mod source;
 
 #[cfg(feature = "http")]
 pub mod http;

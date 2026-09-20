@@ -161,6 +161,7 @@ name = "anilist-source"
 version = "0.0.1"
 dependencies = [
  "anilist-core",
+ "reqwest",
  "thiserror 2.0.20",
 ]
 

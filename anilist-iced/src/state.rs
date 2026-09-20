@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use anilist_core::{ScheduleDay, anime::Anime, season::AnimeSeason};
-use anilist_source::AnimeSource;
+use anilist_source::AnimeFetcher;
 use anilist_youranimes::fetcher::YourAnimesFetcher;
 use chrono::{Datelike, Local};
 use iced::{

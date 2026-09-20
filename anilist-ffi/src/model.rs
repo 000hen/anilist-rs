@@ -8,6 +8,61 @@ use anilist_core::{
 use chrono::Weekday as CoreWeekday;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum HttpMethod {
+    Get,
+    Post,
+}
+
+impl From<anilist_source::HttpMethod> for HttpMethod {
+    fn from(value: anilist_source::HttpMethod) -> Self {
+        match value {
+            anilist_source::HttpMethod::Get => Self::Get,
+            anilist_source::HttpMethod::Post => Self::Post,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct HttpHeader {
+    pub name: String,
+    pub value: String,
+}
+
+impl From<anilist_source::HttpHeader> for HttpHeader {
+    fn from(value: anilist_source::HttpHeader) -> Self {
+        Self {
+            name: value.name,
+            value: value.value,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct HttpRequest {
+    pub method: HttpMethod,
+    pub url: String,
+    pub headers: Vec<HttpHeader>,
+    pub body: Option<String>,
+}
+
+impl From<anilist_source::HttpRequest> for HttpRequest {
+    fn from(value: anilist_source::HttpRequest) -> Self {
+        Self {
+            method: value.method.into(),
+            url: value.url,
+            headers: value.headers.into_iter().map(Into::into).collect(),
+            body: value.body,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct SourceInfo {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum Weekday {
     Monday,
     Tuesday,

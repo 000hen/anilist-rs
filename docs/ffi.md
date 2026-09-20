@@ -51,7 +51,7 @@ anilist-ffi -> anilist-youranimes -> anilist-core + anilist-nextjs
 - `system-timezone` enables system-clock/timezone helpers and forwards timezone
   support to a source when that source is enabled.
 
-The default feature set is `http + system-timezone + youranimes`.
+The default feature set is `http + system-timezone + all-sources`.
 `anilist-youranimes` itself has no default features; its HTTP and timezone
 capabilities are opt-in.
 
@@ -204,3 +204,23 @@ The script does not clean the workspace or change the checked-in release profile
 Remove `--offline` if dependencies need downloading. Compare the DLL/SO/dylib
 only; static libraries and rlibs are not included in the size totals. Results are
 platform/compiler-specific.
+
+## Source-owned requests with host-owned HTTP
+
+`NativeAnimeSource` extends the parser surface with `list_request`, `search_request`, and
+`detail_request`. Each returns source-independent `HttpRequest` data (method, URL, headers,
+optional body). `available_sources()` lists the compiled source IDs. Enable `all-sources`
+(currently YourAnimes) without `http` for host-owned networking.
+
+In Rust, `AnimeSource: AnimeParser` describes the protocol, `HttpClient` executes shared
+request data, and `AnimeFetcher` describes the asynchronous fetch operations. The existing
+`YourAnimesFetcher<C>` composes a source with any `HttpClient`; reqwest's implementation is
+behind `anilist-source/http`. The former asynchronous `AnimeSource` trait is now named
+`AnimeFetcher` so source definitions do not imply network ownership.
+
+Android can execute requests using OkHttp and pass the response body back to `parse_list`,
+`parse_search`, or `parse_detail`. In particular, use `detail_request(id)` for search IDs;
+callers no longer need to strip source prefixes or construct provider URLs.
+Generate Android bindings with a global `--config` file containing
+`[defaults.bindings.kotlin]` and `android = true`.
+The FFI error payload is named `detail` to avoid conflicting with Kotlin `Throwable.message`.

@@ -22,7 +22,7 @@ pub fn system_timezone() -> Result<Tz, anilist_core::time::ZoneConversionError> 
 #[cfg(all(test, feature = "http"))]
 mod tests {
     use anilist_core::season::AnimeSeason;
-    use anilist_source::AnimeSource;
+    use anilist_source::AnimeFetcher;
     #[cfg(feature = "system-timezone")]
     use chrono::{Datelike, Local};
     use reqwest::Client;

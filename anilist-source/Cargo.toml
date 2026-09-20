@@ -6,3 +6,8 @@ edition.workspace = true
 [dependencies]
 anilist-core.workspace = true
 thiserror.workspace = true
+reqwest = { workspace = true, optional = true }
+
+[features]
+default = []
+http = ["dep:reqwest"]

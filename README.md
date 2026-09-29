@@ -21,7 +21,7 @@
 ## 📦 專案結構
 
 ```
-anilist-rs
+anilist-rs/crates
 ├── anilist-core          # 核心資料模型與時區轉換邏輯
 │                           Anime、AnimeTime、AnimeSeason、Minute、ScheduleDay
 ├── anilist-source        # Parser、來源協定、HTTP transport 與 fetcher trait
@@ -46,16 +46,16 @@ Android 等自行管理網路的宿主可使用 `--no-default-features --feature
 目前唯一的來源 ID 是 `youranimes`。建置方式、Kotlin 綁定與完整 API 請見
 [FFI 說明](docs/ffi.md)。
 
-| 類別      | 套件                                         |
-|---------|--------------------------------------------|
-| 語言      | Rust（Edition 2024）                         |
-| GUI 框架  | [Iced](https://iced.rs) 0.14（daemon 多視窗模式） |
-| HTTP 請求 | reqwest                                    |
-| HTML 解析 | html5gum（不建立 DOM）                          |
-| 時區處理    | chrono、chrono-tz、iana-time-zone            |
-| 非同步執行   | tokio                                      |
-| 序列化     | serde / serde_json                         |
-| 系統整合    | open（開啟預設瀏覽器）                              |
+| 類別       | 套件                                              |
+| ---------- | ------------------------------------------------- |
+| 語言       | Rust（Edition 2024）                              |
+| GUI 框架   | [Iced](https://iced.rs) 0.14（daemon 多視窗模式） |
+| HTTP 請求  | reqwest                                           |
+| HTML 解析  | html5gum（不建立 DOM）                            |
+| 時區處理   | chrono、chrono-tz、iana-time-zone                 |
+| 非同步執行 | tokio                                             |
+| 序列化     | serde / serde_json                                |
+| 系統整合   | open（開啟預設瀏覽器）                            |
 
 ## 🚀 開始使用
 

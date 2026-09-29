@@ -22,7 +22,7 @@ search, and detail operations are available through the source and FFI APIs.
 ## 📦 Project Structure
 
 ```
-anilist-rs
+anilist-rs/crates
 ├── anilist-core          # Core data models & timezone conversion logic
 │                           Anime, AnimeTime, AnimeSeason, Minute, ScheduleDay
 ├── anilist-source        # Parser, source protocol, HTTP transport, and fetcher traits
@@ -51,7 +51,7 @@ available is `youranimes`. See the
 [FFI guide](docs/ffi.md) for build variants, API contracts, and Kotlin migration.
 
 | Category       | Crate                                                   |
-|----------------|---------------------------------------------------------|
+| -------------- | ------------------------------------------------------- |
 | Language       | Rust (Edition 2024)                                     |
 | GUI Framework  | [Iced](https://iced.rs) 0.14 (daemon multi-window mode) |
 | HTTP Client    | reqwest                                                 |

@@ -1,14 +1,14 @@
 [workspace]
 resolver = "3"
 members = [
-  "anilist-core",
-  "anilist-ffi",
-  "anilist-iced",
-  "anilist-nextjs",
-  "anilist-nextjs-ffi",
-  "anilist-source",
-  "anilist-youranimes",
-  "uniffi-bindgen",
+  "crates/anilist-core",
+  "crates/anilist-ffi",
+  "crates/anilist-iced",
+  "crates/anilist-nextjs",
+  "crates/anilist-nextjs-ffi",
+  "crates/anilist-source",
+  "crates/anilist-youranimes",
+  "crates/uniffi-bindgen",
 ]
 
 [workspace.package]
@@ -16,11 +16,11 @@ version = "0.0.1"
 edition = "2024"
 
 [workspace.dependencies]
-anilist-core = { path = "anilist-core", default-features = false }
-anilist-nextjs = { path = "anilist-nextjs" }
-anilist-nextjs-ffi = { path = "anilist-nextjs-ffi" }
-anilist-source = { path = "anilist-source" }
-anilist-youranimes = { path = "anilist-youranimes", default-features = false }
+anilist-core = { path = "crates/anilist-core", default-features = false }
+anilist-nextjs = { path = "crates/anilist-nextjs" }
+anilist-nextjs-ffi = { path = "crates/anilist-nextjs-ffi" }
+anilist-source = { path = "crates/anilist-source" }
+anilist-youranimes = { path = "crates/anilist-youranimes", default-features = false }
 cbindgen = "0.29"
 chrono = { version = "0.4.45", default-features = false, features = ["std"] }
 chrono-tz = "0.10.4"

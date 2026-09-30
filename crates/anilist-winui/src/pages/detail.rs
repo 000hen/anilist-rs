@@ -66,6 +66,7 @@ pub fn view(anime: &Anime, width: f64, error: Option<&str>, on_open: Callback<St
         } else {
             HorizontalAlignment::Left
         })
+        .vertical_alignment(VerticalAlignment::Top)
         .content(artwork::view(
             anime.image.as_deref(),
             &anime.name,
@@ -115,6 +116,7 @@ pub fn view(anime: &Anime, width: f64, error: Option<&str>, on_open: Callback<St
                 },
             ),
         ));
+
     ScrollViewer::new()
         .horizontal_scroll_bar_visibility(ScrollBarVisibility::Disabled)
         .content(

@@ -176,6 +176,7 @@ pub fn view(page: Page<'_>, on_event: Callback<Event>) -> View {
                     )),
             )
         });
+
         GridView::new()
             .automation_name("動畫海報集")
             .slots([SlotView::collection(GridViewSlot::Items, cards)])

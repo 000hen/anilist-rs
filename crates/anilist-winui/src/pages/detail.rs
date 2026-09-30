@@ -128,6 +128,8 @@ pub fn view(anime: &Anime, width: f64, error: Option<&str>, on_open: Callback<St
         .content(
             Grid::new()
                 .margin(if compact { 20.0 } else { 32.0 })
+                .max_width(1040.0)
+                .horizontal_alignment(HorizontalAlignment::Stretch)
                 .column_spacing(32.0)
                 .row_spacing(24.0)
                 .columns(if compact {

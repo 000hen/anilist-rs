@@ -101,14 +101,12 @@ fn search_reconciles_prompt_results_loading_empty_and_error() {
     {
         let view = search::view(
             search::Page {
-                query: "show",
                 term,
                 results,
                 loading,
                 error,
                 width: 480.0,
             },
-            Callback::new(|_| {}),
             Callback::new(|()| {}),
             Callback::new(|()| {}),
             Callback::new(|_| {}),
@@ -166,4 +164,39 @@ fn detail_reconciles_between_columns_and_stacked_layout() {
     ))
     .unwrap();
     pump.update_view(View::empty()).unwrap();
+}
+
+
+#[test]
+fn season_picker_browses_without_loading_and_commits_on_selection() {
+    use std::{cell::RefCell, rc::Rc};
+    use windows_reactor::test::{EventId, EventPayload, QueuedEvent};
+    let chosen = Rc::new(RefCell::new(Vec::new()));
+    let received = chosen.clone();
+    let mut pump = Pump::new(RecordingRuntime::default());
+    pump.mount_view(crate::components::season_picker::view(2026, AnimeSeason::Summer,
+        Callback::new(move |selection| received.borrow_mut().push(selection)))).unwrap();
+    let click = |pump: &mut Pump<RecordingRuntime>, name: &str| {
+        let node = pump.runtime().commands().iter().flatten().rev().find_map(|command| match command {
+            Command::SetProperty { node, property: PropertyId::AutomationName, value: PropertyValue::Str(value) }
+                if value == name && pump.event_revision(*node, EventId::ButtonClick).is_some() => Some(*node),
+            _ => None,
+        }).expect("button must be active");
+        let revision = pump.event_revision(node, EventId::ButtonClick).unwrap();
+        pump.queue_event(QueuedEvent::new(node, EventId::ButtonClick, revision, EventPayload::Unit));
+        pump.dispatch_events().unwrap();
+        pump.dispatch_components(32).unwrap();
+    };
+    click(&mut pump, "前一年");
+    assert!(chosen.borrow().is_empty(), "browsing a year must not load a season");
+    click(&mut pump, "選擇 2025 冬季");
+    assert_eq!(*chosen.borrow(), vec![(2025, AnimeSeason::Winter)]);
+}
+
+#[test]
+fn wide_detail_content_has_a_maximum_width() {
+    let mut pump = Pump::new(RecordingRuntime::default());
+    pump.mount_view(detail::view(&anime(), 2400.0, None, Callback::new(|_| {}))).unwrap();
+    assert!(pump.runtime().commands().iter().flatten().any(|command| matches!(command,
+        Command::SetProperty { property: PropertyId::MaxWidth, value: PropertyValue::F64(width), .. } if *width == 1040.0)));
 }

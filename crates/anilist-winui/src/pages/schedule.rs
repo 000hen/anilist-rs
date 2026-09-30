@@ -11,9 +11,10 @@ use windows_reactor::*;
 
 pub enum Event {
     Refresh,
-    Search,
+    Season(u16, AnimeSeason),
     Open(Box<Anime>),
 }
+
 pub struct Page<'a> {
     pub year: u16,
     pub season: AnimeSeason,
@@ -22,6 +23,7 @@ pub struct Page<'a> {
     pub error: Option<&'a str>,
     pub width: f64,
 }
+
 pub fn day_label(day: ScheduleDay) -> &'static str {
     match day {
         ScheduleDay::Unknown => "時間未定",
@@ -36,40 +38,38 @@ pub fn day_label(day: ScheduleDay) -> &'static str {
         ][day.num_days_from_monday() as usize],
     }
 }
+
 pub fn view(page: Page<'_>, on_event: Callback<Event>) -> View {
     let inset = if page.width < 640.0 { 16.0 } else { 32.0 };
     let refresh = on_event.clone();
-    let search = on_event.clone();
+    let select = on_event.clone();
+
     let header = Grid::new()
         .columns([GridLength::Star(1.0), GridLength::Auto])
         .children((
-            heading(format!("{} {}", page.year, page.season), 28.0),
+            crate::components::season_picker::view(
+                page.year,
+                page.season,
+                Callback::new(move |(year, season)| {
+                    let _ = select.call(Event::Season(year, season));
+                }),
+            ),
             StackPanel::new()
                 .grid_column(1)
                 .orientation(Orientation::Horizontal)
                 .spacing(8.0)
-                .children((
-                    Button::new()
-                        .style(ButtonStyle::Subtle)
-                        .automation_name("搜尋動畫")
-                        .automation_id("OpenSearch")
-                        .on_click(move || {
-                            let _ = search.call(Event::Search);
-                        })
-                        .content(SymbolIcon::new().symbol(Symbol::Find))
-                        .tooltip("搜尋動畫"),
-                    Button::new()
-                        .style(ButtonStyle::Subtle)
-                        .automation_name("重新整理番表")
-                        .automation_id("RefreshSchedule")
-                        .is_enabled(!page.loading)
-                        .on_click(move || {
-                            let _ = refresh.call(Event::Refresh);
-                        })
-                        .content(SymbolIcon::new().symbol(Symbol::Sync))
-                        .tooltip("重新整理番表"),
-                )),
+                .children((Button::new()
+                    .style(ButtonStyle::Subtle)
+                    .automation_name("重新整理番表")
+                    .automation_id("RefreshSchedule")
+                    .is_enabled(!page.loading)
+                    .on_click(move || {
+                        let _ = refresh.call(Event::Refresh);
+                    })
+                    .content(SymbolIcon::new().symbol(Symbol::Sync))
+                    .tooltip("重新整理番表"),)),
         ));
+
     let content = if page.catalog.sections.is_empty() {
         let retry = on_event.clone();
         feedback::empty(
@@ -159,6 +159,7 @@ pub fn view(page: Page<'_>, on_event: Callback<Event>) -> View {
                 }),
             ))
     };
+
     Grid::new()
         .margin(Thickness::new(inset, 24.0, inset, 16.0))
         .row_spacing(20.0)

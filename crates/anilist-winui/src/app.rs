@@ -31,15 +31,28 @@ pub struct Application {
 }
 
 pub enum Message {
-    Loaded(u64, u16, AnimeSeason, Result<Vec<Anime>, String>),
+    Loaded(u64, Result<Vec<Anime>, String>),
     SourceQuery(String),
     SearchSource,
+    SubmitSearch(String),
     Back,
     Searched(u64, Result<Vec<Anime>, String>),
     Page(Event),
     Resized(f64),
 }
+
 impl Application {
+    fn finish_load(&mut self, request: u64, result: Result<Vec<Anime>, String>) {
+        if request != self.request {
+            return;
+        }
+        self.loading = false;
+        match result {
+            Ok(animes) => self.catalog = Catalog::new(animes, Local::now().weekday()),
+            Err(error) => self.error = Some(error),
+        }
+    }
+
     fn finish_search(&mut self, request: u64, result: Result<Vec<Anime>, String>) {
         if request != self.search_request {
             return;
@@ -55,16 +68,18 @@ impl Application {
         let request = self.request;
         self.loading = true;
         self.error = None;
-        let (year, season) = current_year_season();
+        let (year, season) = (self.year, self.season);
         context.spawn_background_with_rejection(
-            move |_| Message::Loaded(request, year, season, services::load_season(year, season)),
-            Message::Loaded(request, year, season, Err("無法接收資料，請重試。".into())),
+            move |_| Message::Loaded(request, services::load_season(year, season)),
+            Message::Loaded(request, Err("無法接收資料，請重試。".into())),
         );
     }
 }
+
 impl Component for Application {
     type Input = ();
     type Message = Message;
+
     fn create(_: &(), context: &ComponentContext<Self>) -> Self {
         let (year, season) = current_year_season();
         let mut app = Self {
@@ -86,24 +101,20 @@ impl Component for Application {
         app.load(context);
         app
     }
+
     fn update(&mut self, message: Message, context: &ComponentContext<Self>) {
         match message {
-            Message::Loaded(request, year, season, result) => {
-                if request != self.request {
-                    return;
-                }
-                self.loading = false;
-                match result {
-                    Ok(animes) => {
-                        (self.year, self.season) = (year, season);
-                        self.catalog = Catalog::new(animes, Local::now().weekday());
-                    }
-                    Err(error) => self.error = Some(error),
-                }
+            Message::Loaded(request, result) => {
+                self.finish_load(request, result);
             }
             Message::SourceQuery(query) => self.source_query = query,
             Message::Back => self.surface = MainSurface::Schedule,
+            Message::SubmitSearch(query) => {
+                self.source_query = query;
+                self.update(Message::SearchSource, context);
+            }
             Message::SearchSource => {
+                self.surface = MainSurface::Search;
                 let keyword = self.source_query.trim().to_owned();
                 self.search_request += 1;
                 self.search_results.clear();
@@ -124,7 +135,13 @@ impl Component for Application {
             }
             Message::Page(event) => match event {
                 Event::Refresh => self.load(context),
-                Event::Search => self.surface = MainSurface::Search,
+                Event::Season(year, season) => {
+                    if (year, season) != (self.year, self.season) {
+                        (self.year, self.season) = (year, season);
+                        self.catalog = Catalog::new(Vec::new(), Local::now().weekday());
+                        self.load(context);
+                    }
+                }
                 Event::Open(anime) => {
                     if !context
                         .open_window(View::component::<windows::detail::DetailWindow>(*anime))
@@ -140,6 +157,7 @@ impl Component for Application {
             Message::Resized(width) => self.width = width,
         }
     }
+
     fn view(&self, _: &(), context: &mut ViewContext<Self>) -> View {
         windows::main::view(self, context)
     }
@@ -189,5 +207,18 @@ mod tests {
         assert_eq!(app.error.as_deref(), Some("season error"));
         assert_eq!(app.search_error.as_deref(), Some("search error"));
         assert!(app.loading);
+    }
+    #[test]
+    fn older_season_result_cannot_replace_the_selected_season() {
+        let mut app = application();
+        app.year = 2025;
+        app.season = AnimeSeason::Winter;
+        app.request = 3;
+        app.finish_load(2, Err("previous season failed".into()));
+        assert!(app.loading);
+        assert!(app.error.is_none());
+        app.finish_load(3, Ok(vec![]));
+        assert!(!app.loading);
+        assert_eq!((app.year, app.season), (2025, AnimeSeason::Winter));
     }
 }

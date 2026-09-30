@@ -24,14 +24,17 @@ builds provide a small unsupported-platform message and can run the pure catalog
 
 ## Behavior and design
 
-- Loads the current season through the shared YourAnimes fetcher, including local
+- Loads the selected season (the current season at startup) through the shared YourAnimes fetcher, including local
   timezone conversion. Refresh replaces the catalog instead of appending duplicates.
 - Groups animation cards from today's weekday, sorts each day by airing time, and
   places unknown schedules last. The schedule shows only the season and weekday sections.
-- Search has its own surface with a compact thumbnail list and independent loading,
+- The title-bar search submits with Enter and opens a compact thumbnail list with independent loading,
   error, and empty states. Back returns to the preserved seasonal catalog. Older
   requests cannot overwrite newer results; clearing a submitted query resets search.
-- Opens independent detail windows with artwork, synopsis, genres, cast, streaming
+- The season selector browses years from 2015 through next year; choosing one of four
+  seasons loads it immediately. Refresh retains the selected season.
+- Opens independent detail windows with centered content capped at 1,040 DIPs,
+  artwork, synopsis, genres, cast, streaming
   links, and related websites. Links accept only HTTP(S) and open in the default browser.
 - Uses native WinUI controls, a Mica backdrop, system theme brushes, Fluent typography,
   accessible control names, keyboard-operable buttons, a responsive weekday grid,
@@ -49,3 +52,4 @@ Some examples on the windows-rs main branch describe a different hook-based API 
 Validation: catalog unit tests and a native Windows build. Visual layout, keyboard,
 Narrator, light/dark/contrast themes, and live networking require runtime validation
 on a machine with the matching Windows App Runtime installed.
+

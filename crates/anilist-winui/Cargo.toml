@@ -1,0 +1,22 @@
+[package]
+name = "anilist-winui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anilist-core = { workspace = true, features = ["clock"] }
+chrono = { workspace = true, features = ["clock"] }
+
+[build-dependencies]
+winresource.workspace = true
+
+[target."cfg(windows)".dependencies]
+anilist-source.workspace = true
+anilist-youranimes = { workspace = true, features = ["http", "system-timezone"] }
+open.workspace = true
+reqwest.workspace = true
+tokio = { version = "1", features = ["net", "rt", "time"] }
+windows-reactor.workspace = true
+
+[target."cfg(windows)".dev-dependencies]
+windows-reactor = { workspace = true, features = ["test"] }

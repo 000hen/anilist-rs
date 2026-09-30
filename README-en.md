@@ -16,8 +16,12 @@ times to the local timezone, and presents the schedule as a week starting from t
 - 🔗 Clickable streaming platform icons (Netflix, Bahamut Anime Crazy, Prime Video, etc.) that open
   directly in your default browser
 
-The desktop UI does not currently expose season selection or search. Year/season list queries,
+The Iced desktop UI does not currently expose season selection or search. Year/season list queries,
 search, and detail operations are available through the source and FFI APIs.
+
+A native [WinUI 3 version](crates/anilist-winui/README.md) is also available on Windows,
+using Rust `windows-reactor`, Fluent controls, Mica, and local season search.
+Run it with `cargo run -p anilist-winui` after installing Windows App Runtime 2.4 or later.
 
 ## 📦 Project Structure
 
@@ -31,6 +35,7 @@ anilist-rs/crates
 ├── anilist-youranimes    # youranimes.tw parser/fetcher implementation
 ├── anilist-ffi           # Dynamic source/parser/fetcher UniFFI
 ├── anilist-iced          # Iced GUI multi-window desktop application
+├── anilist-winui         # Native WinUI 3 / Fluent Windows application
 └── uniffi-bindgen        # Binding generator for built UniFFI libraries
 ```
 

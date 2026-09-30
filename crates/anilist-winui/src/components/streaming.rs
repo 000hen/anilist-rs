@@ -5,9 +5,9 @@ use windows_reactor::*;
 /// Compact platform identities; the complete list is available in the detail window.
 pub fn summary(streams: &[AnimeStreaming], width: f64) -> View {
     if streams.is_empty() {
-        return text("尚無串流平台資訊").font_size(12.0).height(28.0).into();
+        return View::empty();
     }
-    let capacity = ((width - 44.0) / 32.0).floor().max(1.0) as usize;
+    let capacity = ((width - 24.0) / 24.0).floor().clamp(1.0, 3.0) as usize;
     let icons = streams
         .iter()
         .take(capacity)
@@ -16,20 +16,20 @@ pub fn summary(streams: &[AnimeStreaming], width: f64) -> View {
             KeyedView::new(
                 index,
                 Border::new()
-                    .width(24.0)
-                    .height(24.0)
-                    .content(logo(stream, 24.0))
+                    .width(18.0)
+                    .height(18.0)
+                    .content(logo(stream, 18.0))
                     .tooltip(&stream.name),
             )
         });
     StackPanel::new()
         .orientation(Orientation::Horizontal)
-        .spacing(8.0)
-        .height(28.0)
+        .spacing(6.0)
+        .height(18.0)
         .children((
             StackPanel::new()
                 .orientation(Orientation::Horizontal)
-                .spacing(8.0)
+                .spacing(6.0)
                 .keyed_children(icons),
             if streams.len() > capacity {
                 text(format!("+{}", streams.len() - capacity))

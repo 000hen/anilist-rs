@@ -3,13 +3,6 @@ use anilist_core::{
 };
 use chrono::{Datelike, Local, Weekday};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct CatalogSummary {
-    pub total: usize,
-    pub today: usize,
-    pub streamable: usize,
-}
-
 #[derive(Debug, Clone)]
 pub struct DaySection {
     pub day: ScheduleDay,
@@ -19,28 +12,10 @@ pub struct DaySection {
 #[derive(Debug, Clone)]
 pub struct Catalog {
     pub sections: Vec<DaySection>,
-    pub summary: CatalogSummary,
 }
 
 impl Catalog {
     pub fn new(animes: Vec<Anime>, today: Weekday) -> Self {
-        let summary = CatalogSummary {
-            total: animes.len(),
-            today: animes
-                .iter()
-                .filter(|anime| {
-                    anime
-                        .on_air_time
-                        .as_ref()
-                        .is_some_and(|time| time.week == today)
-                })
-                .count(),
-            streamable: animes
-                .iter()
-                .filter(|anime| !anime.streaming.is_empty())
-                .count(),
-        };
-
         let mut sections: Vec<_> = get_week_order(today)
             .into_iter()
             .map(|day| DaySection {
@@ -71,16 +46,7 @@ impl Catalog {
         }
         sections.retain(|section| !section.animes.is_empty());
 
-        Self { sections, summary }
-    }
-
-    pub fn search(&self, query: &str) -> Vec<&Anime> {
-        let query = query.trim().to_lowercase();
-        self.sections
-            .iter()
-            .flat_map(|section| &section.animes)
-            .filter(|anime| matches_query(anime, &query))
-            .collect()
+        Self { sections }
     }
 }
 
@@ -101,23 +67,9 @@ pub fn schedule_text(anime: &Anime) -> String {
     }
 }
 
-fn matches_query(anime: &Anime, query: &str) -> bool {
-    query.is_empty()
-        || anime.name.to_lowercase().contains(query)
-        || anime.description.to_lowercase().contains(query)
-        || anime
-            .genres
-            .iter()
-            .any(|genre| genre.to_lowercase().contains(query))
-        || anime
-            .cast
-            .iter()
-            .any(|member| member.to_lowercase().contains(query))
-}
-
 #[cfg(test)]
 mod tests {
-    use anilist_core::{anime::AnimeStreaming, minute::Minute};
+    use anilist_core::minute::Minute;
 
     use super::*;
 
@@ -166,38 +118,6 @@ mod tests {
         );
         assert_eq!(catalog.sections[1].day, ScheduleDay::Weekday(Weekday::Sun));
         assert_eq!(catalog.sections[2].day, ScheduleDay::Unknown);
-    }
-
-    #[test]
-    fn summary_counts_today_and_streaming() {
-        let mut streamable = anime("streamable", Some(Weekday::Tue), None);
-        streamable.streaming.push(AnimeStreaming {
-            name: "Service".to_owned(),
-            url: "https://example.com".to_owned(),
-            logo: String::new(),
-        });
-        let catalog = Catalog::new(vec![streamable, anime("unknown", None, None)], Weekday::Tue);
-        assert_eq!(
-            catalog.summary,
-            CatalogSummary {
-                total: 2,
-                today: 1,
-                streamable: 1,
-            }
-        );
-    }
-
-    #[test]
-    fn search_matches_name_description_genre_and_cast() {
-        let mut item = anime("Example Show", Some(Weekday::Mon), Some(90));
-        item.description = "An ocean story".to_owned();
-        item.genres.push("Adventure".to_owned());
-        item.cast.push("Alice".to_owned());
-        let catalog = Catalog::new(vec![item], Weekday::Mon);
-        for query in ["show", "OCEAN", "adventure", "alice", "  ExAmPlE  ", ""] {
-            assert_eq!(catalog.search(query).len(), 1);
-        }
-        assert!(catalog.search("missing").is_empty());
     }
 
     #[test]

@@ -1,7 +1,7 @@
 use crate::{
     catalog::schedule_text,
     components::{
-        artwork, feedback, streaming,
+        artwork, feedback, metadata, streaming,
         typography::{heading, text},
     },
 };
@@ -80,12 +80,18 @@ pub fn view(anime: &Anime, width: f64, error: Option<&str>, on_open: Callback<St
         .children((
             StackPanel::new().spacing(12.0).children((
                 heading(&anime.name, 28.0),
-                text(format!(
-                    "{}{}",
-                    if anime.is_adult { "18+ · " } else { "" },
-                    anime.genres.join(" · ")
-                )),
-                text(schedule_text(anime)).foreground(ThemeBrush::AccentText),
+                StackPanel::new()
+                    .orientation(Orientation::Horizontal)
+                    .spacing(12.0)
+                    .children((
+                        text(schedule_text(anime)).vertical_alignment(VerticalAlignment::Center),
+                        metadata::adult_badge(anime.is_adult),
+                    )),
+                if anime.genres.is_empty() {
+                    View::empty()
+                } else {
+                    text(anime.genres.join(" · ")).into()
+                },
             )),
             section("線上觀看", platforms),
             feedback::error(error),

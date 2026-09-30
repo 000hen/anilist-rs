@@ -27,15 +27,18 @@ builds provide a small unsupported-platform message and can run the pure catalog
 - Loads the current season through the shared YourAnimes fetcher, including local
   timezone conversion. Refresh replaces the catalog instead of appending duplicates.
 - Groups animation cards from today's weekday, sorts each day by airing time, and
-  places unknown schedules last. Visible weekday filters and a local text filter
-  narrow the displayed catalog by title, description, genre, or cast.
-- The native title-bar search calls `AnimeFetcher::search()` across the source.
-  Submit an empty search to return to the current season. Older requests cannot
-  overwrite newer results.
+  places unknown schedules last. The schedule shows only the season and weekday sections.
+- Search has its own surface with a compact thumbnail list and independent loading,
+  error, and empty states. Back returns to the preserved seasonal catalog. Older
+  requests cannot overwrite newer results; clearing a submitted query resets search.
 - Opens independent detail windows with artwork, synopsis, genres, cast, streaming
   links, and related websites. Links accept only HTTP(S) and open in the default browser.
 - Uses native WinUI controls, a Mica backdrop, system theme brushes, Fluent typography,
-  accessible control names, keyboard-operable buttons, and a responsive scrolling GridView.
+  accessible control names, keyboard-operable buttons, a responsive weekday grid,
+  and a native search ListView. The pinned Reactor API lacks
+  grouped collection invocation, so schedule items use subtle native buttons in one
+  scrolling surface. Cards show direct airtimes, an adult badge, up to two genres,
+  and up to three small platform logos.
 - Fetching runs outside the UI thread with network timeouts and loading/error/retry
   states. Failed refreshes preserve the previous successful catalog.
 

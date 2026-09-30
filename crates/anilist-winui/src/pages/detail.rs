@@ -33,13 +33,14 @@ pub fn view(anime: &Anime, width: f64, error: Option<&str>, on_open: Callback<St
                 )
             }))
     };
+
     let sites = anime.site.iter().enumerate().map(|(index, site)| {
         let url = site.url.clone();
         let open = on_open.clone();
         KeyedView::new(
             index,
             Button::new()
-                .style(ButtonStyle::TextLink)
+                .style(ButtonStyle::Default)
                 .horizontal_alignment(HorizontalAlignment::Stretch)
                 .horizontal_content_alignment(HorizontalAlignment::Stretch)
                 .automation_name(format!("在瀏覽器開啟 {}", site.title))
@@ -57,6 +58,7 @@ pub fn view(anime: &Anime, width: f64, error: Option<&str>, on_open: Callback<St
                 ),
         )
     });
+
     let poster = Border::new()
         .width(poster_width)
         .horizontal_alignment(if compact {
@@ -69,6 +71,7 @@ pub fn view(anime: &Anime, width: f64, error: Option<&str>, on_open: Callback<St
             &anime.name,
             poster_width * 1.5,
         ));
+
     let description = StackPanel::new()
         .spacing(24.0)
         .grid_column(if compact { 0 } else { 1 })

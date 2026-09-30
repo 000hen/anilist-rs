@@ -180,27 +180,29 @@ pub fn view(page: Page<'_>, on_event: Callback<Event>) -> View {
             .automation_name("動畫海報集")
             .slots([SlotView::collection(GridViewSlot::Items, cards)])
     };
+
     Grid::new()
-        .margin(inset)
         .row_spacing(20.0)
-        .rows([
-            GridLength::Auto,
-            GridLength::Auto,
-            GridLength::Auto,
-            GridLength::Star(1.0),
-        ])
+        .rows([GridLength::Auto, GridLength::Star(1.0)])
         .children((
-            header,
-            Grid::new().grid_row(1).children((toolbar,)),
-            StackPanel::new().grid_row(2).spacing(8.0).children((
-                feedback::error(page.error),
-                text(if page.loading {
-                    "更新中…".into()
-                } else {
-                    format!("{result_count} 部動畫 · 依播出日與時間排列 · 本機時區")
-                })
-                .font_size(12.0),
-            )),
-            Grid::new().grid_row(3).children((content,)),
+            StackPanel::new()
+                .margin(Thickness::new(32.0, 32.0, 32.0, 8.0))
+                .children((
+                    header,
+                    Grid::new().grid_row(1).children((toolbar,)),
+                    StackPanel::new().grid_row(2).spacing(8.0).children((
+                        feedback::error(page.error),
+                        text(if page.loading {
+                            "更新中…".into()
+                        } else {
+                            format!("{result_count} 部動畫 · 依播出日與時間排列 · 本機時區")
+                        })
+                        .font_size(12.0),
+                    )),
+                )),
+            Grid::new()
+                .grid_row(3)
+                .margin(Thickness::xy(32.0, 0.0))
+                .children((content,)),
         ))
 }

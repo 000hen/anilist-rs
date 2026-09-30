@@ -2,7 +2,7 @@ use windows_reactor::*;
 
 pub fn visuals(width: f64, height: f64) -> WindowVisuals {
     WindowVisuals::new()
-        .backdrop(WindowBackdrop::Mica)
+        .backdrop(WindowBackdrop::Acrylic)
         .client_size(width, height)
         .constraints(WindowConstraints {
             min_width: Some(480.0),
@@ -16,7 +16,6 @@ pub fn frame(title: &str, subtitle: &str, content: View) -> View {
         TitleBar::new()
             .title(title)
             .subtitle(subtitle)
-            .min_height(32.0)
             .preferred_height(WindowTitleBarHeight::Standard)
             .into(),
         content,

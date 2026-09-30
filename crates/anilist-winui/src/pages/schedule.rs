@@ -1,7 +1,7 @@
 use crate::{
     catalog::Catalog,
     components::{
-        anime_card, feedback,
+        anime_card, feedback, season_picker,
         typography::{heading, text},
     },
 };
@@ -47,7 +47,7 @@ pub fn view(page: Page<'_>, on_event: Callback<Event>) -> View {
     let header = Grid::new()
         .columns([GridLength::Star(1.0), GridLength::Auto])
         .children((
-            crate::components::season_picker::view(
+            season_picker::view(
                 page.year,
                 page.season,
                 Callback::new(move |(year, season)| {

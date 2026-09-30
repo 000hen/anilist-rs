@@ -1,6 +1,7 @@
 use super::shell;
 use crate::{
     app::{Application, MainSurface, Message},
+    components::title_search,
     pages::{schedule, search},
 };
 use windows_reactor::*;
@@ -42,7 +43,7 @@ pub fn view(app: &Application, context: &mut ViewContext<Application>) -> View {
             .preferred_height(WindowTitleBarHeight::Tall)
             .slots([SlotView::new(
                 TitleBarSlot::Content,
-                crate::components::title_search::view(
+                title_search::view(
                     &app.source_query,
                     app.width,
                     context.callback(Message::SourceQuery),

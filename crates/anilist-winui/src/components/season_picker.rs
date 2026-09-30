@@ -1,7 +1,7 @@
 use super::typography::{heading, text};
 use crate::catalog::current_year_season;
 use anilist_core::season::AnimeSeason;
-use windows_reactor::*;
+use windows_reactor::{ButtonStyle::Default, *};
 
 const EARLIEST_YEAR: u16 = 2015;
 const SEASONS: [AnimeSeason; 4] = [
@@ -20,11 +20,11 @@ pub struct Selection {
 
 struct SeasonPicker {
     year: u16,
-    revision: u64,
     selection: Selection,
+    revision: u32,
 }
+
 enum Message {
-    Open,
     Year(u16),
     Select(AnimeSeason),
 }
@@ -44,8 +44,8 @@ impl Component for SeasonPicker {
     fn create(input: &Selection, _: &ComponentContext<Self>) -> Self {
         Self {
             year: input.year,
-            revision: 0,
             selection: input.clone(),
+            revision: 0,
         }
     }
 
@@ -55,14 +55,12 @@ impl Component for SeasonPicker {
 
     fn update(&mut self, message: Message, _: &ComponentContext<Self>) {
         match message {
-            Message::Open => self.year = self.selection.year,
             Message::Year(year) => {
                 self.year = year.clamp(EARLIEST_YEAR, current_year_season().0 + 1)
             }
             Message::Select(season) => {
                 let _ = self.selection.on_select.call((self.year, season));
-                // Retiring the flyout closes it even when the selected season did not change.
-                self.revision += 1;
+                self.revision = !self.revision;
             }
         }
     }
@@ -104,9 +102,9 @@ impl Component for SeasonPicker {
                             .grid_row((index / 2) as i32)
                             .horizontal_alignment(HorizontalAlignment::Stretch)
                             .style(if input.year == self.year && input.season == season {
-                                ButtonStyle::Accent
+                                Some(ButtonStyle::Accent)
                             } else {
-                                ButtonStyle::Default
+                                None
                             })
                             .automation_name(format!("選擇 {} {}", self.year, season))
                             .on_click(context.callback(move |()| Message::Select(season)))
@@ -114,15 +112,15 @@ impl Component for SeasonPicker {
                     )
                 })),
         ));
+
         View::keyed_fragment([KeyedView::new(
             self.revision,
-            DropDownButton::new()
+            Button::new()
                 .horizontal_alignment(HorizontalAlignment::Left)
                 .automation_name("選擇年份與季度")
                 .automation_id("SeasonSelector")
-                .on_click(context.callback(|()| Message::Open))
                 .content(heading(format!("{} {}", input.year, input.season), 28.0))
-                .flyout_with(Flyout::rich(content).placement(FlyoutPlacement::Bottom)),
+                .flyout_with(Flyout::rich(content).placement(FlyoutPlacement::Right)),
         )])
     }
 }

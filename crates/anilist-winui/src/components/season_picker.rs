@@ -1,7 +1,7 @@
 use super::typography::{heading, text};
 use crate::catalog::current_year_season;
 use anilist_core::season::AnimeSeason;
-use windows_reactor::{ButtonStyle::Default, *};
+use windows_reactor::*;
 
 const EARLIEST_YEAR: u16 = 2015;
 const SEASONS: [AnimeSeason; 4] = [

@@ -23,6 +23,10 @@ A native [WinUI 3 version](crates/anilist-winui/README.md) is also available on 
 using Rust `windows-reactor`, Fluent controls, Mica, and local season search.
 Run it with `cargo run -p anilist-winui` after installing Windows App Runtime 2.4 or later.
 
+Before any Cargo build in a fresh checkout, run `python scripts/setup-windows-reactor.py`
+(Python 3.12+ and Git required). This downloads and verifies the pinned Reactor crate
+and applies our small Enter-to-search patch into an ignored directory.
+
 ## 📦 Project Structure
 
 ```

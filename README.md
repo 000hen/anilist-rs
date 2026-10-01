@@ -22,6 +22,10 @@ Windows 另提供原生 [WinUI 3 版本](crates/anilist-winui/README.md)，使�
 `windows-reactor`、Fluent 控制項、Mica 背景與本季搜尋。安裝 Windows App Runtime
 2.4 或更新的 2.x 版本後，執行 `cargo run -p anilist-winui`。
 
+首次使用此工作區（包含 Android／FFI 建置）前，請先執行
+`python scripts/setup-windows-reactor.py`（需要 Python 3.12+ 與 Git）。
+腳本會下載並驗證固定版本的 Reactor，套用 Enter 搜尋修補；完整原始碼不納入版本控制。
+
 ## 📦 專案結構
 
 ```

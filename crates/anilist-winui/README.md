@@ -13,6 +13,7 @@ See Microsoft's [Windows App SDK downloads](https://learn.microsoft.com/windows/
 From the workspace root:
 
 ```powershell
+python scripts/setup-windows-reactor.py
 cargo run -p anilist-winui
 cargo build --release -p anilist-winui
 cargo test -p anilist-winui
@@ -45,6 +46,14 @@ builds provide a small unsupported-platform message and can run the pure catalog
 - Fetching runs outside the UI thread with network timeouts and loading/error/retry
   states. Failed refreshes preserve the previous successful catalog.
 
+The workspace stores only a small Reactor patch for native `AutoSuggestBox.QuerySubmitted`
+(Enter-to-search); see [patch notes](../../patches/windows-reactor/README.md).
+Run setup with Python 3.12+ and Git before the first Cargo command in a fresh checkout.
+It verifies the pinned crate archive and applies the patch into ignored `vendor/windows-reactor`.
+It can reuse Cargo's cached archive offline and safely verifies an existing installation.
+Because Cargo resolves workspace patches on every platform, this setup is required for
+other workspace packages and Android builds too.
+
 The published 0.100 API uses `Component`, `ViewContext`, `View`, and `App::run_component`.
 Some examples on the windows-rs main branch describe a different hook-based API and
 `windows-reactor-setup`; they do not apply to this pinned crate version.
@@ -52,4 +61,3 @@ Some examples on the windows-rs main branch describe a different hook-based API 
 Validation: catalog unit tests and a native Windows build. Visual layout, keyboard,
 Narrator, light/dark/contrast themes, and live networking require runtime validation
 on a machine with the matching Windows App Runtime installed.
-

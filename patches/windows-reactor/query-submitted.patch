@@ -1,0 +1,262 @@
+--- a/src/generated.rs
++++ b/src/generated.rs
+@@ -21,6 +21,7 @@
+ pub(crate) struct AutoSuggestBoxEvents {
+     on_text_changed: Option<Callback<String>>,
+     on_suggestion_chosen: Option<Callback<String>>,
++    on_query_submitted: Option<Callback<String>>,
+ }
+ #[derive(Clone, Debug, Default, PartialEq)]
+ pub(crate) struct TitleBarEvents {
+@@ -1458,6 +1459,13 @@
+             )
+             .on_suggestion_chosen = Some(callback.into_payload_callback());
+             self
++        }        pub fn on_query_submitted(mut self, callback: impl IntoPayloadCallback<String>) -> Self {
++            std::rc::Rc::make_mut(
++                self.events
++                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
++            )
++            .on_query_submitted = Some(callback.into_payload_callback());
++            self
+         }
+     }
+     impl sealed::Sealed for AutoSuggestBox {}
+@@ -9114,6 +9122,13 @@
+                             .events
+                             .as_ref()
+                             .is_some_and(|events| events.on_suggestion_chosen.is_some()),
++                    );
++                    visit(
++                        EventId::AutoSuggestBoxQuerySubmitted,
++                        value
++                            .events
++                            .as_ref()
++                            .is_some_and(|events| events.on_query_submitted.is_some()),
+                     );
+                 }
+                 Self::PasswordBox(_) => {
+@@ -11432,6 +11447,13 @@
+                         .events
+                         .as_ref()
+                         .is_some_and(|events| events.on_suggestion_chosen.is_some()),
++                );
++                visit(
++                    EventId::AutoSuggestBoxQuerySubmitted,
++                    values
++                        .events
++                        .as_ref()
++                        .is_some_and(|events| events.on_query_submitted.is_some()),
+                 );
+             }
+             Self::PasswordBox(_) => {
+@@ -11792,6 +11814,14 @@
+                 .events
+                 .as_ref()
+                 .and_then(|events| events.on_suggestion_chosen.as_ref())
++                .map(|callback| callback.call(value.clone())),            (
++                Self::AutoSuggestBox(values),
++                EventId::AutoSuggestBoxQuerySubmitted,
++                EventPayload::Str(value),
++            ) => values
++                .events
++                .as_ref()
++                .and_then(|events| events.on_query_submitted.as_ref())
+                 .map(|callback| callback.call(value.clone())),
+             (
+                 Self::PasswordBox(values),
+@@ -14086,6 +14116,7 @@
+     TextBoxTextChanged,
+     AutoSuggestBoxTextChanged,
+     AutoSuggestBoxSuggestionChosen,
++    AutoSuggestBoxQuerySubmitted,
+     PasswordBoxPasswordChanged,
+     NumberBoxValueChanged,
+     SliderValueChanged,
+@@ -15444,6 +15475,12 @@
+         field: "on_suggestion_chosen",
+         payload: "Str",
+         interface: "Microsoft.UI.Xaml.Controls.IAutoSuggestBox",
++    },    EventDescriptor {
++        id: EventId::AutoSuggestBoxQuerySubmitted,
++        name: "QuerySubmitted",
++        field: "on_query_submitted",
++        payload: "Str",
++        interface: "Microsoft.UI.Xaml.Controls.IAutoSuggestBox",
+     },
+ ];
+ const AUTO_SUGGEST_BOX_SLOTS: &[SlotDescriptor] = &[SlotDescriptor {
+--- a/src/native/winui/bindings.rs
++++ b/src/native/winui/bindings.rs
+@@ -541,6 +541,37 @@
+ }
+ unsafe impl Send for AutoSuggestBoxSuggestionChosenEventArgs {}
+ unsafe impl Sync for AutoSuggestBoxSuggestionChosenEventArgs {}
++#[repr(transparent)]
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct AutoSuggestBoxQuerySubmittedEventArgs(windows_core::IUnknown);
++windows_core::imp::interface_hierarchy!(
++    AutoSuggestBoxQuerySubmittedEventArgs,
++    windows_core::IUnknown,
++    windows_core::IInspectable
++);
++windows_core::imp::required_hierarchy!(AutoSuggestBoxQuerySubmittedEventArgs, DependencyObject);
++impl windows_core::RuntimeType for AutoSuggestBoxQuerySubmittedEventArgs {
++    const SIGNATURE: windows_core::imp::ConstBuffer = windows_core::imp::ConstBuffer::for_class::<
++        Self,
++        IAutoSuggestBoxQuerySubmittedEventArgs,
++    >();
++}
++unsafe impl windows_core::Interface for AutoSuggestBoxQuerySubmittedEventArgs {
++    type Vtable = <IAutoSuggestBoxQuerySubmittedEventArgs as windows_core::Interface>::Vtable;
++    const IID: windows_core::GUID =
++        <IAutoSuggestBoxQuerySubmittedEventArgs as windows_core::Interface>::IID;
++}
++impl core::ops::Deref for AutoSuggestBoxQuerySubmittedEventArgs {
++    type Target = IAutoSuggestBoxQuerySubmittedEventArgs;
++    fn deref(&self) -> &Self::Target {
++        unsafe { core::mem::transmute(self) }
++    }
++}
++impl windows_core::RuntimeName for AutoSuggestBoxQuerySubmittedEventArgs {
++    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.AutoSuggestBoxQuerySubmittedEventArgs";
++}
++unsafe impl Send for AutoSuggestBoxQuerySubmittedEventArgs {}
++unsafe impl Sync for AutoSuggestBoxQuerySubmittedEventArgs {}
+ #[repr(transparent)]
+ #[derive(Clone, Debug, Eq, PartialEq)]
+ pub struct AutoSuggestBoxTextChangedEventArgs(windows_core::IUnknown);
+@@ -5201,6 +5232,45 @@
+                 windows_core::Interface::vtable(self).RemoveSuggestionChosen,
+             ))
+         }
++    }    pub(crate) fn QuerySubmitted<F>(
++        &self,
++        handler: F,
++    ) -> windows_core::Result<windows_core::EventRevoker>
++    where
++        F: Fn(
++                windows_core::Ref<AutoSuggestBox>,
++                windows_core::Ref<AutoSuggestBoxQuerySubmittedEventArgs>,
++            ) + 'static,
++    {
++        let handler: TypedEventHandler<AutoSuggestBox, AutoSuggestBoxQuerySubmittedEventArgs> = {
++            let com =
++                windows_core::imp::DelegateBox::<
++                    TypedEventHandler<AutoSuggestBox, AutoSuggestBoxQuerySubmittedEventArgs>,
++                    F,
++                >::new(
++                    &TypedEventHandlerBox::<
++                        AutoSuggestBox,
++                        AutoSuggestBoxQuerySubmittedEventArgs,
++                        F,
++                    >::VTABLE,
++                    handler,
++                );
++            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
++        };
++        unsafe {
++            let mut result__ = core::mem::zeroed();
++            let token__ = (windows_core::Interface::vtable(self).QuerySubmitted)(
++                windows_core::Interface::as_raw(self),
++                windows_core::Interface::as_raw(&handler),
++                &mut result__,
++            )
++            .map(|| result__)?;
++            Ok(windows_core::EventRevoker::new(
++                self.clone(),
++                token__,
++                windows_core::Interface::vtable(self).RemoveQuerySubmitted,
++            ))
++        }
+     }
+     pub(crate) fn TextChanged<F>(
+         &self,
+@@ -5285,6 +5355,9 @@
+     ) -> windows_core::HRESULT,
+     pub RemoveTextChanged:
+         unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
++    pub QuerySubmitted: unsafe extern "system" fn(*mut core::ffi::c_void, *mut core::ffi::c_void, *mut i64) -> windows_core::HRESULT,
++    pub RemoveQuerySubmitted: unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
++
+ }
+ windows_core::imp::define_interface!(
+     IAutoSuggestBoxStatics,
+@@ -5339,6 +5412,36 @@
+         *mut core::ffi::c_void,
+         *mut *mut core::ffi::c_void,
+     ) -> windows_core::HRESULT,
++}
++windows_core::imp::define_interface!(
++    IAutoSuggestBoxQuerySubmittedEventArgs,
++    IAutoSuggestBoxQuerySubmittedEventArgs_Vtbl,
++    0x26da5de4_57a6_57bf_acc9_aac599c0b22b
++);
++impl windows_core::RuntimeType for IAutoSuggestBoxQuerySubmittedEventArgs {
++    const SIGNATURE: windows_core::imp::ConstBuffer =
++        windows_core::imp::ConstBuffer::for_interface::<Self>();
++}
++impl IAutoSuggestBoxQuerySubmittedEventArgs {
++    pub(crate) fn QueryText(&self) -> windows_core::Result<windows_core::HSTRING> {
++        unsafe {
++            let mut result__ = core::mem::zeroed();
++            (windows_core::Interface::vtable(self).QueryText)(
++                windows_core::Interface::as_raw(self),
++                &mut result__,
++            )
++            .map(|| core::mem::transmute::<*mut core::ffi::c_void, windows_core::HSTRING>(result__))
++        }
++    }
++}
++#[repr(C)]
++pub struct IAutoSuggestBoxQuerySubmittedEventArgs_Vtbl {
++    pub base__: windows_core::IInspectable_Vtbl,
++    pub QueryText: unsafe extern "system" fn(
++        *mut core::ffi::c_void,
++        *mut *mut core::ffi::c_void,
++    ) -> windows_core::HRESULT,
++    ChosenSuggestion: usize,
+ }
+ windows_core::imp::define_interface!(
+     IAutoSuggestBoxTextChangedEventArgs,
+@@ -29597,3 +29700,4 @@
+         b"struct(Microsoft.UI.Xaml.Markup.XmlnsDefinition;string;string)",
+     );
+ }
++
+--- a/src/native/winui/generated.rs
++++ b/src/native/winui/generated.rs
+@@ -5062,6 +5062,33 @@
+             revision,
+         })
+         .map_err(native_error),
++        (Handle::AutoSuggestBox(value), EventId::AutoSuggestBoxQuerySubmitted) => {
++            value.QuerySubmitted(move |_, args| {
++                if let Some(args) = args.as_ref() {
++                    match args
++                        .QueryText()
++                    {
++                        Ok(value) => sink.enqueue(
++                            node,
++                            EventId::AutoSuggestBoxQuerySubmitted,
++                            revision,
++                            EventPayload::Str(value.to_string_lossy()),
++                        ),
++                        Err(error) => sink.error(
++                            node,
++                            EventId::AutoSuggestBoxQuerySubmitted,
++                            revision,
++                            native_error(error),
++                        ),
++                    }
++                }
++            })
++        }
++        .map(|revoker| NativeSubscription::Event {
++            _revoker: revoker,
++            revision,
++        })
++        .map_err(native_error),
+         (Handle::PasswordBox(value), EventId::PasswordBoxPasswordChanged) => {
+             let event_source = (*value).clone();
+             value.PasswordChanged({

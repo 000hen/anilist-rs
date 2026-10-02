@@ -158,7 +158,6 @@ fn search_reconciles_prompt_results_loading_empty_and_error() {
                 width: 480.0,
             },
             Callback::new(|()| {}),
-            Callback::new(|()| {}),
             Callback::new(|_| {}),
         );
         if index == 0 {

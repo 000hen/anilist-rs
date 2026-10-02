@@ -13,12 +13,7 @@ pub struct Page<'a> {
     pub error: Option<&'a str>,
     pub width: f64,
 }
-pub fn view(
-    page: Page<'_>,
-    on_retry: Callback<()>,
-    on_back: Callback<()>,
-    on_open: Callback<Box<Anime>>,
-) -> View {
+pub fn view(page: Page<'_>, on_retry: Callback<()>, on_open: Callback<Box<Anime>>) -> View {
     let retry = on_retry;
     let content = if page.results.is_empty() {
         let (title, description) = if page.loading {
@@ -64,18 +59,7 @@ pub fn view(
         .row_spacing(20.0)
         .rows([GridLength::Auto, GridLength::Auto, GridLength::Star(1.0)])
         .children((
-            StackPanel::new()
-                .orientation(Orientation::Horizontal)
-                .spacing(12.0)
-                .children((
-                    Button::new()
-                        .style(ButtonStyle::Subtle)
-                        .automation_name("返回番表")
-                        .on_click(on_back)
-                        .content(SymbolIcon::new().symbol(Symbol::Back))
-                        .tooltip("返回番表"),
-                    heading("搜尋動畫", 28.0),
-                )),
+            heading("搜尋動畫", 28.0),
             StackPanel::new().grid_row(1).spacing(8.0).children((
                 feedback::error(page.error),
                 if let Some(term) = page.term {

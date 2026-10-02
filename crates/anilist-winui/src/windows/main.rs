@@ -32,13 +32,15 @@ pub fn view(app: &Application, context: &mut ViewContext<Application>) -> View {
                 width: app.width,
             },
             context.callback(|()| Message::SearchSource),
-            context.callback(|()| Message::Back),
             context.callback(|anime| Message::Page(schedule::Event::Open(anime))),
         ),
     };
 
     shell::frame_with_title_bar(
         shell::title_bar("Anilist")
+            .is_back_button_visible(app.surface == MainSurface::Search)
+            .is_back_button_enabled(app.surface == MainSurface::Search)
+            .on_back_requested(context.callback(|()| Message::Back))
             .preferred_height(WindowTitleBarHeight::Tall)
             .slots([SlotView::new(
                 TitleBarSlot::Content,

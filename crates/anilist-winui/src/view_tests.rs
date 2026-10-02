@@ -8,9 +8,59 @@ use anilist_core::{
 };
 use chrono::Weekday;
 use windows_reactor::{
-    Callback, View,
+    Callback, EncodedImage, TitleBar, View,
     test::{Command, PropertyId, PropertyValue, Pump, RecordingRuntime},
 };
+
+#[test]
+fn title_bar_icon_reconciles_replacement_and_removal() {
+    let mut pump = Pump::new(RecordingRuntime::default());
+    pump.mount_view(crate::windows::shell::title_bar("Anilist").into())
+        .unwrap();
+    let node = pump
+        .runtime()
+        .commands()
+        .iter()
+        .flatten()
+        .find_map(|command| match command {
+            Command::SetProperty {
+                node,
+                property: PropertyId::TitleBarIconSource,
+                value: PropertyValue::EncodedImage(image),
+            } => {
+                assert!(image.as_bytes().starts_with(b"\x89PNG\r\n\x1a\n"));
+                Some(*node)
+            }
+            _ => None,
+        })
+        .expect("icon must belong to the native TitleBar");
+
+    let replacement = EncodedImage::from_static(b"replacement image bytes");
+    pump.update_view(
+        TitleBar::new()
+            .title("Anilist")
+            .icon_source_data(replacement.clone())
+            .into(),
+    )
+    .unwrap();
+    assert_eq!(
+        pump.runtime()
+            .node(node)
+            .unwrap()
+            .property(PropertyId::TitleBarIconSource),
+        Some(&PropertyValue::EncodedImage(replacement)),
+    );
+
+    pump.update_view(TitleBar::new().title("Anilist").into())
+        .unwrap();
+    assert!(
+        pump.runtime()
+            .node(node)
+            .unwrap()
+            .property(PropertyId::TitleBarIconSource)
+            .is_none()
+    );
+}
 fn anime() -> Anime {
     Anime {
         id: "fixture".into(),

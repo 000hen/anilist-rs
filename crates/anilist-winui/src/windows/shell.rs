@@ -13,8 +13,7 @@ pub fn visuals(width: f64, height: f64) -> WindowVisuals {
 
 pub fn frame(title: &str, subtitle: &str, content: View) -> View {
     frame_with_title_bar(
-        TitleBar::new()
-            .title(title)
+        title_bar(title)
             .subtitle(subtitle)
             .preferred_height(WindowTitleBarHeight::Standard)
             .into(),
@@ -22,25 +21,16 @@ pub fn frame(title: &str, subtitle: &str, content: View) -> View {
     )
 }
 
+pub fn title_bar(title: &str) -> TitleBar {
+    TitleBar::new()
+        .title(title)
+        .icon_source_data(EncodedImage::from_static(include_bytes!(
+            "../../assets/icon.png"
+        )))
+}
+
 pub fn frame_with_title_bar(title_bar: View, content: View) -> View {
     Grid::new()
         .rows([GridLength::Auto, GridLength::Star(1.0)])
-        .children((
-            Grid::new()
-                .columns([GridLength::Auto, GridLength::Star(1.0)])
-                .children((
-                    Image::new()
-                        .source_data(EncodedImage::from_static(include_bytes!(
-                            "../../../anilist-iced/src/image/icon.ico"
-                        )))
-                        .width(24.0)
-                        .height(24.0)
-                        .margin(Thickness::new(16.0, 0.0, 0.0, 0.0))
-                        .stretch(Stretch::Uniform)
-                        .vertical_alignment(VerticalAlignment::Center)
-                        .automation_name("Anilist"),
-                    Grid::new().grid_column(1).children((title_bar,)),
-                )),
-            Grid::new().grid_row(1).children((content,)),
-        ))
+        .children((title_bar, Grid::new().grid_row(1).children((content,))))
 }

@@ -38,8 +38,7 @@ pub fn view(app: &Application, context: &mut ViewContext<Application>) -> View {
     };
 
     shell::frame_with_title_bar(
-        TitleBar::new()
-            .title("Anilist")
+        shell::title_bar("Anilist")
             .preferred_height(WindowTitleBarHeight::Tall)
             .slots([SlotView::new(
                 TitleBarSlot::Content,

@@ -4,20 +4,22 @@
 import hashlib
 import io
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import tarfile
 import tempfile
 import urllib.request
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = "0.100.0"
 SHA256 = "5e3f0c06995fb2b791584562e32c76d4fed2241d0460a82c3fcdf30a32beadc3"
 ARCHIVE = f"windows-reactor-{VERSION}.crate"
 URL = f"https://static.crates.io/crates/windows-reactor/{ARCHIVE}"
-PATCH = ROOT / "patches/windows-reactor/query-submitted.patch"
+PATCHES = [
+    ROOT / "patches/windows-reactor/query-submitted.patch",
+    ROOT / "patches/windows-reactor/title-bar-icon.patch",
+]
 DESTINATION = ROOT / "vendor/windows-reactor"
 
 
@@ -39,8 +41,15 @@ def setup():
         with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as package:
             package.extractall(staging, filter="data")
         source = staging / f"windows-reactor-{VERSION}"
-        subprocess.run(["git", "apply", "--check", str(PATCH)], cwd=source, check=True)
-        subprocess.run(["git", "apply", "--whitespace=nowarn", str(PATCH)], cwd=source, check=True)
+        for patch in PATCHES:
+            subprocess.run(
+                ["git", "apply", "--check", str(patch)], cwd=source, check=True
+            )
+            subprocess.run(
+                ["git", "apply", "--whitespace=nowarn", str(patch)],
+                cwd=source,
+                check=True,
+            )
 
         if DESTINATION.exists():
             # Preserve local edits; never silently replace an existing dependency.
@@ -53,12 +62,12 @@ def setup():
                         f"Existing dependency differs: {actual}. "
                         "Move vendor/windows-reactor aside and rerun setup."
                     )
-            print(f"Reactor {VERSION} with QuerySubmitted is already prepared")
+            print(f"Reactor {VERSION} with local patches is already prepared")
             return
 
         DESTINATION.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(source), str(DESTINATION))
-        print(f"Prepared Reactor {VERSION} with QuerySubmitted at {DESTINATION}")
+        print(f"Prepared Reactor {VERSION} with local patches at {DESTINATION}")
 
 
 if __name__ == "__main__":

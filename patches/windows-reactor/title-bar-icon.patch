@@ -1,0 +1,401 @@
+--- a/src/generated.rs
++++ b/src/generated.rs
+@@ -1748,6 +1748,7 @@
+     }
+     #[derive(Clone, Debug, Default, PartialEq)]
+     pub struct TitleBar {
++        icon_source: Property<EncodedImage>,
+         title: Property<String>,
+         subtitle: Property<String>,
+         is_back_button_visible: Property<bool>,
+@@ -1758,6 +1759,11 @@
+         preferred_height: WindowTitleBarHeight,
+     }
+     impl TitleBar {
++        /// Sets the native title-bar icon from encoded bitmap data.
++        pub fn icon_source_data(mut self, value: EncodedImage) -> Self {
++            self.icon_source = Property::Set(value);
++            self
++        }
+         pub fn new() -> Self {
+             Self::default()
+         }
+@@ -6797,6 +6803,7 @@
+                 Self::TitleBar(value) => {
+                     let value = std::rc::Rc::unwrap_or_clone(value);
+                     let TitleBar {
++                        icon_source,
+                         title,
+                         subtitle,
+                         is_back_button_visible,
+@@ -6809,6 +6816,7 @@
+                     ElementParts {
+                         kind: MountedKind::TitleBar,
+                         props: MountedProps::TitleBar(std::rc::Rc::new(TitleBarMountedProps {
++                            icon_source,
+                             title,
+                             subtitle,
+                             is_back_button_visible,
+@@ -8341,7 +8349,8 @@
+                         && value.on_value_changed == mounted.on_value_changed
+                 }
+                 (Self::TitleBar(value), MountedProps::TitleBar(mounted)) => {
+-                    true && value.title == mounted.title
++                    true && value.icon_source == mounted.icon_source
++                        && value.title == mounted.title
+                         && value.subtitle == mounted.subtitle
+                         && value.is_back_button_visible == mounted.is_back_button_visible
+                         && value.is_back_button_enabled == mounted.is_back_button_enabled
+@@ -9901,6 +9910,13 @@
+                 );
+             }
+             Self::TitleBar(values) => {
++                visit(
++                    PropertyId::TitleBarIconSource,
++                    match &values.icon_source {
++                        Property::Inherited => None,
++                        Property::Set(value) => Some(PropertyValueRef::EncodedImage(value)),
++                    },
++                );
+                 visit(
+                     PropertyId::TitleBarTitle,
+                     match &values.title {
+@@ -12887,6 +12903,7 @@
+ }
+ #[derive(Clone, Debug)]
+ pub(crate) struct TitleBarMountedProps {
++    icon_source: Property<EncodedImage>,
+     title: Property<String>,
+     subtitle: Property<String>,
+     is_back_button_visible: Property<bool>,
+@@ -12896,7 +12913,8 @@
+ }
+ impl PartialEq for TitleBarMountedProps {
+     fn eq(&self, other: &Self) -> bool {
+-        true && self.title == other.title
++        true && self.icon_source == other.icon_source
++            && self.title == other.title
+             && self.subtitle == other.subtitle
+             && self.is_back_button_visible == other.is_back_button_visible
+             && self.is_back_button_enabled == other.is_back_button_enabled
+@@ -13928,6 +13946,7 @@
+     SliderIsEnabled,
+     SliderStepFrequency,
+     SliderOrientation,
++    TitleBarIconSource,
+     TitleBarTitle,
+     TitleBarSubtitle,
+     TitleBarIsBackButtonVisible,
+@@ -15694,6 +15713,17 @@
+ }];
+ const TITLE_BAR_PROPERTIES: &[PropertyDescriptor] = &[
+     PropertyDescriptor {
++        id: PropertyId::TitleBarIconSource,
++        name: "IconSource",
++        field: "icon_source",
++        value: "EncodedImage",
++        interface: "Microsoft.UI.Xaml.Controls.ITitleBar",
++        clearable: true,
++        feedback: None,
++        feedback_contract: None,
++        observes_feedback: false,
++    },
++    PropertyDescriptor {
+         id: PropertyId::TitleBarTitle,
+         name: "Title",
+         field: "title",
+--- a/src/native/winui/generated.rs
++++ b/src/native/winui/generated.rs
+@@ -3179,6 +3179,9 @@
+             .map_err(native_error),
+         (Handle::Slider(_), PropertyId::SliderOrientation) => dependency_object
+             .ClearValue(&bindings::Slider::OrientationProperty().map_err(native_error)?)
++            .map_err(native_error),
++        (Handle::TitleBar(_), PropertyId::TitleBarIconSource) => dependency_object
++            .ClearValue(&bindings::TitleBar::IconSourceProperty().map_err(native_error)?)
+             .map_err(native_error),
+         (Handle::TitleBar(_), PropertyId::TitleBarTitle) => dependency_object
+             .ClearValue(&bindings::TitleBar::TitleProperty().map_err(native_error)?)
+--- a/src/native/winui/mod.rs
++++ b/src/native/winui/mod.rs
+@@ -1857,7 +1857,9 @@
+             } => {
+                 if matches!(
+                     property,
+-                    PropertyId::ImageSource | PropertyId::ImageIconSource
++                    PropertyId::ImageSource
++                        | PropertyId::ImageIconSource
++                        | PropertyId::TitleBarIconSource
+                 ) {
+                     self.release_encoded_image_source(*node);
+                     if let PropertyValue::EncodedImage(value) = value {
+@@ -1972,7 +1974,9 @@
+             Command::ClearProperty { node, property } => {
+                 if matches!(
+                     property,
+-                    PropertyId::ImageSource | PropertyId::ImageIconSource
++                    PropertyId::ImageSource
++                        | PropertyId::ImageIconSource
++                        | PropertyId::TitleBarIconSource
+                 ) {
+                     self.release_encoded_image_source(*node);
+                 }
+@@ -3739,7 +3743,7 @@
+         image: &EncodedImage,
+     ) -> Result<(), RuntimeError> {
+         match self.handles.get(&node) {
+-            Some(Handle::Image(_) | Handle::ImageIcon(_)) => {}
++            Some(Handle::Image(_) | Handle::ImageIcon(_) | Handle::TitleBar(_)) => {}
+             Some(_) => return Err(RuntimeError::UnsupportedKind),
+             None => return Err(RuntimeError::MissingNode(node)),
+         }
+@@ -3826,6 +3830,12 @@
+     fn set_decoded_image(&self, node: NodeId, bitmap: &BitmapImage) -> Result<(), RuntimeError> {
+         let source = bitmap.cast::<ImageSource>().map_err(native_error)?;
+         match self.handles.get(&node) {
++            Some(Handle::TitleBar(control)) => {
++                let icon = ImageIconSource::new().map_err(native_error)?;
++                icon.SetImageSource(&source).map_err(native_error)?;
++                let icon = icon.cast::<IconSource>().map_err(native_error)?;
++                control.SetIconSource(&icon).map_err(native_error)
++            }
+             Some(Handle::Image(control)) => control.SetSource(&source).map_err(native_error),
+             Some(Handle::ImageIcon(control)) => control.SetSource(&source).map_err(native_error),
+             Some(_) => Err(RuntimeError::UnsupportedKind),
+--- a/src/native/winui/bindings.rs
++++ b/src/native/winui/bindings.rs
+@@ -10218,6 +10218,22 @@
+         unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+ }
+ windows_core::imp::define_interface!(
++    IIconSource,
++    IIconSource_Vtbl,
++    0x39e6b320_a2af_5ee3_b7e9_4ba4aa80541a
++);
++impl windows_core::RuntimeType for IIconSource {
++    const SIGNATURE: windows_core::imp::ConstBuffer =
++        windows_core::imp::ConstBuffer::for_interface::<Self>();
++}
++#[repr(C)]
++pub struct IIconSource_Vtbl {
++    pub base__: windows_core::IInspectable_Vtbl,
++    Foreground: usize,
++    SetForeground: usize,
++    CreateIconElement: usize,
++}
++windows_core::imp::define_interface!(
+     IImageIcon,
+     IImageIcon_Vtbl,
+     0x78a7b526_e635_59c6_93a1_d7e3c2fac6d5
+@@ -10282,6 +10298,57 @@
+     pub base__: windows_core::IInspectable_Vtbl,
+     pub SourceProperty: unsafe extern "system" fn(
+         *mut core::ffi::c_void,
++        *mut *mut core::ffi::c_void,
++    ) -> windows_core::HRESULT,
++}
++windows_core::imp::define_interface!(
++    IImageIconSource,
++    IImageIconSource_Vtbl,
++    0x67f75be0_c84d_57ff_9f68_039c81ea7896
++);
++impl windows_core::RuntimeType for IImageIconSource {
++    const SIGNATURE: windows_core::imp::ConstBuffer =
++        windows_core::imp::ConstBuffer::for_interface::<Self>();
++}
++impl IImageIconSource {
++    pub(crate) fn SetImageSource<P0>(&self, value: P0) -> windows_core::Result<()>
++    where
++        P0: windows_core::Param<ImageSource>,
++    {
++        unsafe {
++            (windows_core::Interface::vtable(self).SetImageSource)(
++                windows_core::Interface::as_raw(self),
++                value.param().abi(),
++            )
++            .ok()
++        }
++    }
++}
++#[repr(C)]
++pub struct IImageIconSource_Vtbl {
++    pub base__: windows_core::IInspectable_Vtbl,
++    ImageSource: usize,
++    pub SetImageSource: unsafe extern "system" fn(
++        *mut core::ffi::c_void,
++        *mut core::ffi::c_void,
++    ) -> windows_core::HRESULT,
++}
++windows_core::imp::define_interface!(
++    IImageIconSourceFactory,
++    IImageIconSourceFactory_Vtbl,
++    0x24f76321_71bd_530a_8cc8_3f615cd1437a
++);
++impl windows_core::RuntimeType for IImageIconSourceFactory {
++    const SIGNATURE: windows_core::imp::ConstBuffer =
++        windows_core::imp::ConstBuffer::for_interface::<Self>();
++}
++#[repr(C)]
++pub struct IImageIconSourceFactory_Vtbl {
++    pub base__: windows_core::IInspectable_Vtbl,
++    pub CreateInstance: unsafe extern "system" fn(
++        *mut core::ffi::c_void,
++        *mut core::ffi::c_void,
++        *mut *mut core::ffi::c_void,
+         *mut *mut core::ffi::c_void,
+     ) -> windows_core::HRESULT,
+ }
+@@ -18301,6 +18368,18 @@
+         windows_core::imp::ConstBuffer::for_interface::<Self>();
+ }
+ impl ITitleBar {
++    pub(crate) fn SetIconSource<P0>(&self, value: P0) -> windows_core::Result<()>
++    where
++        P0: windows_core::Param<IconSource>,
++    {
++        unsafe {
++            (windows_core::Interface::vtable(self).SetIconSource)(
++                windows_core::Interface::as_raw(self),
++                value.param().abi(),
++            )
++            .ok()
++        }
++    }
+     pub(crate) fn SetTitle(&self, value: &str) -> windows_core::Result<()> {
+         unsafe {
+             (windows_core::Interface::vtable(self).SetTitle)(
+@@ -18449,7 +18528,10 @@
+         *mut core::ffi::c_void,
+     ) -> windows_core::HRESULT,
+     IconSource: usize,
+-    SetIconSource: usize,
++    pub SetIconSource: unsafe extern "system" fn(
++        *mut core::ffi::c_void,
++        *mut core::ffi::c_void,
++    ) -> windows_core::HRESULT,
+     LeftHeader: usize,
+     SetLeftHeader: usize,
+     Content: usize,
+@@ -18526,7 +18608,10 @@
+         *mut core::ffi::c_void,
+         *mut *mut core::ffi::c_void,
+     ) -> windows_core::HRESULT,
+-    IconSourceProperty: usize,
++    pub IconSourceProperty: unsafe extern "system" fn(
++        *mut core::ffi::c_void,
++        *mut *mut core::ffi::c_void,
++    ) -> windows_core::HRESULT,
+     LeftHeaderProperty: usize,
+     ContentProperty: usize,
+     RightHeaderProperty: usize,
+@@ -21043,6 +21128,34 @@
+ unsafe impl Sync for Image {}
+ #[repr(transparent)]
+ #[derive(Clone, Debug, Eq, PartialEq)]
++pub struct IconSource(windows_core::IUnknown);
++windows_core::imp::interface_hierarchy!(
++    IconSource,
++    windows_core::IUnknown,
++    windows_core::IInspectable
++);
++windows_core::imp::required_hierarchy!(IconSource, DependencyObject);
++impl windows_core::RuntimeType for IconSource {
++    const SIGNATURE: windows_core::imp::ConstBuffer =
++        windows_core::imp::ConstBuffer::for_class::<Self, IIconSource>();
++}
++unsafe impl windows_core::Interface for IconSource {
++    type Vtable = <IIconSource as windows_core::Interface>::Vtable;
++    const IID: windows_core::GUID = <IIconSource as windows_core::Interface>::IID;
++}
++impl core::ops::Deref for IconSource {
++    type Target = IIconSource;
++    fn deref(&self) -> &Self::Target {
++        unsafe { core::mem::transmute(self) }
++    }
++}
++impl windows_core::RuntimeName for IconSource {
++    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.IconSource";
++}
++unsafe impl Send for IconSource {}
++unsafe impl Sync for IconSource {}
++#[repr(transparent)]
++#[derive(Clone, Debug, Eq, PartialEq)]
+ pub struct ImageIcon(windows_core::IUnknown);
+ windows_core::imp::interface_hierarchy!(
+     ImageIcon,
+@@ -21113,6 +21226,58 @@
+ }
+ unsafe impl Send for ImageIcon {}
+ unsafe impl Sync for ImageIcon {}
++#[repr(transparent)]
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct ImageIconSource(windows_core::IUnknown);
++windows_core::imp::interface_hierarchy!(
++    ImageIconSource,
++    windows_core::IUnknown,
++    windows_core::IInspectable
++);
++windows_core::imp::required_hierarchy!(ImageIconSource, IconSource, DependencyObject);
++impl ImageIconSource {
++    pub(crate) fn new() -> windows_core::Result<Self> {
++        Self::IImageIconSourceFactory(|this| unsafe {
++            let mut result__ = core::mem::zeroed();
++            (windows_core::Interface::vtable(this).CreateInstance)(
++                windows_core::Interface::as_raw(this),
++                core::ptr::null_mut(),
++                core::ptr::null_mut(),
++                &mut result__,
++            )
++            .and_then(|| windows_core::imp::Type::from_abi(result__))
++        })
++    }
++    fn IImageIconSourceFactory<
++        R,
++        F: FnOnce(&IImageIconSourceFactory) -> windows_core::Result<R>,
++    >(
++        callback: F,
++    ) -> windows_core::Result<R> {
++        static SHARED: windows_core::imp::FactoryCache<ImageIconSource, IImageIconSourceFactory> =
++            windows_core::imp::FactoryCache::new();
++        SHARED.call(callback)
++    }
++}
++impl windows_core::RuntimeType for ImageIconSource {
++    const SIGNATURE: windows_core::imp::ConstBuffer =
++        windows_core::imp::ConstBuffer::for_class::<Self, IImageIconSource>();
++}
++unsafe impl windows_core::Interface for ImageIconSource {
++    type Vtable = <IImageIconSource as windows_core::Interface>::Vtable;
++    const IID: windows_core::GUID = <IImageIconSource as windows_core::Interface>::IID;
++}
++impl core::ops::Deref for ImageIconSource {
++    type Target = IImageIconSource;
++    fn deref(&self) -> &Self::Target {
++        unsafe { core::mem::transmute(self) }
++    }
++}
++impl windows_core::RuntimeName for ImageIconSource {
++    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.ImageIconSource";
++}
++unsafe impl Send for ImageIconSource {}
++unsafe impl Sync for ImageIconSource {}
+ #[repr(transparent)]
+ #[derive(Clone, Debug, Eq, PartialEq)]
+ pub struct ImageSource(windows_core::IUnknown);
+@@ -28041,6 +28206,16 @@
+     DependencyObject
+ );
+ impl TitleBar {
++    pub(crate) fn IconSourceProperty() -> windows_core::Result<DependencyProperty> {
++        Self::ITitleBarStatics(|this| unsafe {
++            let mut result__ = core::mem::zeroed();
++            (windows_core::Interface::vtable(this).IconSourceProperty)(
++                windows_core::Interface::as_raw(this),
++                &mut result__,
++            )
++            .and_then(|| windows_core::imp::Type::from_abi(result__))
++        })
++    }
+     pub(crate) fn new() -> windows_core::Result<Self> {
+         Self::ITitleBarFactory(|this| unsafe {
+             let mut result__ = core::mem::zeroed();

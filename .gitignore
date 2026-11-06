@@ -1,2 +1,2 @@
-/target
-/vendor/windows-reactor/
+target/
+/application/anilist-winui/vendor/

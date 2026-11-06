@@ -19,18 +19,14 @@ times to the local timezone, and presents the schedule as a week starting from t
 The Iced desktop UI does not currently expose season selection or search. Year/season list queries,
 search, and detail operations are available through the source and FFI APIs.
 
-A native [WinUI 3 version](crates/anilist-winui/README.md) is also available on Windows,
+A native [WinUI 3 version](application/anilist-winui/README.md) is also available on Windows,
 using Rust `windows-reactor`, Fluent controls, Mica, and local season search.
-Run it with `cargo run -p anilist-winui` after installing Windows App Runtime 2.4 or later.
-
-Before any Cargo build in a fresh checkout, run `python scripts/setup-windows-reactor.py`
-(Python 3.12+ and Git required). This downloads and verifies the pinned Reactor crate
-and applies our small Enter-to-search patch into an ignored directory.
+It needs Windows App Runtime 2.4 or later and a one-time Reactor setup described in its README.
 
 ## 📦 Project Structure
 
 ```
-anilist-rs/crates
+anilist-rs/crates           # Library workspace (repository root)
 ├── anilist-core          # Core data models & timezone conversion logic
 │                           Anime, AnimeTime, AnimeSeason, Minute, ScheduleDay
 ├── anilist-source        # Parser, source protocol, HTTP transport, and fetcher traits
@@ -38,9 +34,11 @@ anilist-rs/crates
 ├── anilist-nextjs-ffi    # Independently buildable Next.js UniFFI
 ├── anilist-youranimes    # youranimes.tw parser/fetcher implementation
 ├── anilist-ffi           # Dynamic source/parser/fetcher UniFFI
-├── anilist-iced          # Iced GUI multi-window desktop application
-├── anilist-winui         # Native WinUI 3 / Fluent Windows application
 └── uniffi-bindgen        # Binding generator for built UniFFI libraries
+
+anilist-rs/application      # Each app is its own Cargo workspace
+├── anilist-iced          # Iced GUI multi-window desktop application
+└── anilist-winui         # Native WinUI 3 / Fluent Windows application
 ```
 
 ## 🛠️ Tech Stack
@@ -59,7 +57,7 @@ available is `youranimes`. See the
 [FFI guide](docs/ffi.md) for build variants, API contracts, and Kotlin migration.
 
 | Category       | Crate                                                   |
-| -------------- | ------------------------------------------------------- |
+|----------------|---------------------------------------------------------|
 | Language       | Rust (Edition 2024)                                     |
 | GUI Framework  | [Iced](https://iced.rs) 0.14 (daemon multi-window mode) |
 | HTTP Client    | reqwest                                                 |
@@ -83,10 +81,11 @@ git clone https://github.com/000hen/anilist-rs.git
 cd anilist-rs
 
 # Run
-cargo run -p anilist-iced
+cd application/anilist-iced
+cargo run
 
-# Or build only the desktop app for release
-cargo build --release -p anilist-iced
+# Or build the desktop app for release
+cargo build --release
 ```
 
 ## 🏗️ Architecture

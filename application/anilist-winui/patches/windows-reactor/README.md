@@ -3,11 +3,11 @@
 The patch targets the published `windows-reactor` 0.100.0 crate from microsoft/windows-rs,
 commit `a57cc321bfdbac6bb98c488ba49f399da8fcb98a`, `crates/libs/reactor`.
 Only `query-submitted.patch` is stored in version control. Run
-`python scripts/setup-windows-reactor.py` from the workspace root with Python 3.12+
-and Git before using Cargo, including for non-Windows packages. The script downloads
+`python scripts/setup-windows-reactor.py` from `application/anilist-winui` with Python 3.12+
+and Git before using Cargo in that workspace, on any platform. The script downloads
 the pinned crate (or reads Cargo's cached archive), checks its SHA-256, and applies
 the patch into ignored `vendor/windows-reactor`. Original MIT and Apache-2.0
-licenses are retained in that directory. Cargo uses it through the workspace
+licenses are retained in that directory. Cargo uses it through the app workspace's
 `[patch.crates-io]` entry; the registry cache is unchanged.
 
 Rerunning setup verifies the existing files and refuses to overwrite local edits.

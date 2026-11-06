@@ -1,0 +1,38 @@
+[package]
+name = "anilist-winui"
+version = "0.0.1"
+edition = "2024"
+
+# A standalone workspace confines the patched Reactor to this app; Cargo resolves
+# [patch] for every package in a workspace, so the library and Android builds stay
+# independent of the generated vendor directory.
+[workspace]
+
+[dependencies]
+anilist-core = { path = "../../crates/anilist-core", default-features = false, features = ["clock"] }
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+
+[build-dependencies]
+winresource = "0.1"
+
+[target."cfg(windows)".dependencies]
+anilist-source = { path = "../../crates/anilist-source" }
+anilist-youranimes = { path = "../../crates/anilist-youranimes", default-features = false, features = ["http", "system-timezone"] }
+open = "5.4.4"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls"] }
+tokio = { version = "1", features = ["net", "rt", "time"] }
+windows-reactor = "0.100.0"
+
+[target."cfg(windows)".dev-dependencies]
+windows-reactor = { version = "0.100.0", features = ["test"] }
+
+[profile.release]
+opt-level = "z"
+debug = false
+strip = true
+lto = true
+panic = "abort"
+codegen-units = 1
+
+[patch.crates-io]
+windows-reactor = { path = "vendor/windows-reactor" }

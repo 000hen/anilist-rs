@@ -8,15 +8,16 @@ Native WinUI 3 version of the Iced seasonal anime timetable, written in Rust wit
 Use Windows with the MSVC Rust toolchain (Rust 1.95 or later), Visual Studio C++
 build tools and Windows SDK, and Windows App Runtime **2.4 or later in the 2.x family**
 for your architecture. Reactor 0.100 resolves `Microsoft.WindowsAppRuntime.2` itself.
-See Microsoft's [Windows App SDK downloads](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads).
+See
+Microsoft's [Windows App SDK downloads](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads).
 
-From the workspace root:
+From this directory, which is its own Cargo workspace:
 
 ```powershell
 python scripts/setup-windows-reactor.py
-cargo run -p anilist-winui
-cargo build --release -p anilist-winui
-cargo test -p anilist-winui
+cargo run
+cargo build --release
+cargo test
 ```
 
 This is a framework-dependent Rust executable, not an MSIX or a .NET Reactor app.
@@ -25,11 +26,13 @@ builds provide a small unsupported-platform message and can run the pure catalog
 
 ## Behavior and design
 
-- Loads the selected season (the current season at startup) through the shared YourAnimes fetcher, including local
+- Loads the selected season (the current season at startup) through the shared YourAnimes fetcher,
+  including local
   timezone conversion. Refresh replaces the catalog instead of appending duplicates.
 - Groups animation cards from today's weekday, sorts each day by airing time, and
   places unknown schedules last. The schedule shows only the season and weekday sections.
-- The title-bar search submits with Enter and opens a compact thumbnail list with independent loading,
+- The title-bar search submits with Enter and opens a compact thumbnail list with independent
+  loading,
   error, and empty states. Back returns to the preserved seasonal catalog. Older
   requests cannot overwrite newer results; clearing a submitted query resets search.
 - The season selector browses years from 2015 through next year; choosing one of four
@@ -46,13 +49,13 @@ builds provide a small unsupported-platform message and can run the pure catalog
 - Fetching runs outside the UI thread with network timeouts and loading/error/retry
   states. Failed refreshes preserve the previous successful catalog.
 
-The workspace stores one small Reactor patch for native `AutoSuggestBox.QuerySubmitted`
-(Enter-to-search); see [patch notes](../../patches/windows-reactor/README.md).
+This app stores one small Reactor patch for native `AutoSuggestBox.QuerySubmitted`
+(Enter-to-search); see [patch notes](patches/windows-reactor/README.md).
 Run setup with Python 3.12+ and Git before the first Cargo command in a fresh checkout.
 It verifies the pinned crate archive and applies the patch into ignored `vendor/windows-reactor`.
 It can reuse Cargo's cached archive offline and safely verifies an existing installation.
-Because Cargo resolves workspace patches on every platform, this setup is required for
-other workspace packages and Android builds too.
+Cargo resolves `[patch]` for every package in a workspace on every platform, which is why
+this app is a workspace of its own: the libraries and the Android build never need the setup.
 
 The published 0.100 API uses `Component`, `ViewContext`, `View`, and `App::run_component`.
 Some examples on the windows-rs main branch describe a different hook-based API and

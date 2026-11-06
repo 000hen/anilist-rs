@@ -1,6 +1,4 @@
-use anilist_core::{
-    ScheduleDay, anime::Anime, get_week_order, season::AnimeSeason, time::AnimeTime,
-};
+use anilist_core::{ScheduleDay, anime::Anime, get_week_order, season::AnimeSeason};
 use chrono::{Datelike, Local, Weekday};
 
 #[derive(Debug, Clone)]
@@ -37,11 +35,9 @@ impl Catalog {
 
         for section in &mut sections {
             section.animes.sort_by(|a, b| {
-                match (&a.on_air_time, &b.on_air_time) {
-                    (Some(a), Some(b)) => AnimeTime::airing_cmp(a, b),
-                    _ => std::cmp::Ordering::Equal,
-                }
-                .then_with(|| a.name.cmp(&b.name))
+                a.on_air_time
+                    .cmp(&b.on_air_time)
+                    .then_with(|| a.name.cmp(&b.name))
             });
         }
         sections.retain(|section| !section.animes.is_empty());
@@ -69,7 +65,7 @@ pub fn schedule_text(anime: &Anime) -> String {
 
 #[cfg(test)]
 mod tests {
-    use anilist_core::minute::Minute;
+    use anilist_core::{minute::Minute, time::AnimeTime};
 
     use super::*;
 

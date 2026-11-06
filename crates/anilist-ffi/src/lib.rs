@@ -1,6 +1,5 @@
 mod error;
 mod model;
-pub mod parser;
 pub mod source;
 
 #[cfg(feature = "http")]
@@ -9,17 +8,10 @@ pub mod http;
 pub use error::*;
 pub use model::*;
 
-use std::os::raw::c_char;
-
 #[cfg(feature = "system-timezone")]
 use anilist_core::get_current_week_order;
 
 uniffi::setup_scaffolding!();
-
-#[unsafe(no_mangle)]
-pub extern "C" fn version() -> *const c_char {
-    concat!(env!("CARGO_PKG_VERSION"), "\0").as_ptr().cast()
-}
 
 #[cfg(feature = "system-timezone")]
 #[uniffi::export]

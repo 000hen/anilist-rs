@@ -22,5 +22,4 @@ pub fn adult_badge(is_adult: bool) -> View {
         .padding(Thickness::xy(6.0, 2.0))
         .vertical_alignment(VerticalAlignment::Center)
         .content(text("18+").font_size(12.0))
-        .into()
 }

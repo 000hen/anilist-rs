@@ -42,38 +42,16 @@ impl fmt::Display for AnimeSeason {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::RangeInclusive;
-
     use super::*;
 
-    fn test_and_expect(range: RangeInclusive<u8>, expect: AnimeSeason) {
-        for month in range {
-            let season = AnimeSeason::try_from(month).unwrap();
-            assert_eq!(season, expect);
-        }
-    }
-
     #[test]
-    fn test_normal_parse() {
-        test_and_expect(1..=3, AnimeSeason::Winter);
-        test_and_expect(4..=6, AnimeSeason::Spring);
-        test_and_expect(7..=9, AnimeSeason::Summer);
-        test_and_expect(10..=12, AnimeSeason::Fall);
-    }
-
-    #[test]
-    fn test_out_of_range() {
-        let month: u8 = 13;
-        let season = AnimeSeason::try_from(month);
-
-        assert_eq!(season, Err(SeasonParseError::UnknownSeason))
-    }
-
-    #[test]
-    fn test_u8_max() {
-        let max = u8::MAX;
-        let season = AnimeSeason::try_from(max);
-
-        assert_eq!(season, Err(SeasonParseError::UnknownSeason))
+    fn maps_months_to_seasons() {
+        let seasons: Vec<_> = (1..=12).map(|month| AnimeSeason::try_from(month).unwrap()).collect();
+        assert_eq!(seasons[..3], [AnimeSeason::Winter; 3]);
+        assert_eq!(seasons[3..6], [AnimeSeason::Spring; 3]);
+        assert_eq!(seasons[6..9], [AnimeSeason::Summer; 3]);
+        assert_eq!(seasons[9..], [AnimeSeason::Fall; 3]);
+        assert_eq!(AnimeSeason::try_from(0), Err(SeasonParseError::UnknownSeason));
+        assert_eq!(AnimeSeason::try_from(13), Err(SeasonParseError::UnknownSeason));
     }
 }

@@ -1,60 +1,25 @@
 use std::collections::HashMap;
 
-use anilist_core::anime::Anime;
-use anilist_core::season::AnimeSeason;
+use anilist_core::{anime::Anime, season::AnimeSeason};
 use anilist_nextjs::NextJsData;
 use anilist_source::{
     AnimeParser, AnimeSource, HttpMethod, HttpRequest,
     error::{ParseError, SourceError},
 };
+use serde::Deserialize;
 
-use crate::{
-    ID_PREFIX, YourAnimesParseError,
-    format::{anime::AnimeInformation, search::SearchResult},
-};
+use crate::{ID_PREFIX, format::AnimeInformation};
 
-fn parse_detail(content: &str) -> Result<Anime, YourAnimesParseError> {
-    let parsed: AnimeInformation = NextJsData::parse(content)?.deserialize("/1/3/anime")?;
-    Ok(parsed.into_anime())
-}
+const LIST_URL: &str = "https://youranimes.tw/bangumi/";
+const DETAIL_URL: &str = "https://youranimes.tw/animes/";
+const SEARCH_URL: &str = "https://youranimes.tw/api/v1/animes";
 
-fn parse_list(content: &str) -> Result<Vec<Anime>, YourAnimesParseError> {
-    let data = NextJsData::parse(content)?;
-    let parsed: Vec<AnimeInformation> = data.deserialize("/3/animes")?;
-    let vendors = match data.deserialize::<HashMap<String, String>>("/3/nameMap") {
-        Ok(vendors) => vendors,
-        Err(anilist_nextjs::ParseError::MissingPath { .. }) => HashMap::new(),
-        Err(error) => return Err(error.into()),
-    };
-
-    Ok(parsed
-        .into_iter()
-        .map(|anime| anime.resolve_vendors(&vendors))
-        .map(AnimeInformation::into_anime)
-        .collect())
-}
-
-fn parse_search(content: &str) -> Result<Vec<String>, YourAnimesParseError> {
-    let result = serde_json::from_str::<SearchResult>(content).map_err(|source| {
-        YourAnimesParseError::Json {
-            context: "YourAnimes search response",
-            source,
-        }
-    })?;
-
-    Ok(result
-        .result
-        .into_iter()
-        .map(|item| format!("{ID_PREFIX}:{}", item.id))
-        .collect())
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct YourAnimeParser;
 
 impl YourAnimeParser {
     pub const fn new() -> Self {
-        Self {}
+        Self
     }
 }
 
@@ -63,116 +28,134 @@ impl AnimeParser for YourAnimeParser {
         ID_PREFIX
     }
 
-    fn parse_detail(&self, content: &str) -> Result<Anime, ParseError> {
-        parse_detail(content).map_err(Into::into)
-    }
-
     fn parse_list(&self, content: &str) -> Result<Vec<Anime>, ParseError> {
-        parse_list(content).map_err(Into::into)
+        let data = page(content)?;
+        let animes: Vec<AnimeInformation> = data.deserialize("/3/animes").map_err(page_error)?;
+        let vendors = match data.deserialize::<HashMap<String, String>>("/3/nameMap") {
+            Ok(vendors) => vendors,
+            Err(anilist_nextjs::ParseError::MissingPath { .. }) => HashMap::new(),
+            Err(error) => return Err(page_error(error)),
+        };
+
+        Ok(animes
+            .into_iter()
+            .map(|anime| anime.into_anime(&vendors))
+            .collect())
     }
 
+    fn parse_detail(&self, content: &str) -> Result<Anime, ParseError> {
+        let anime: AnimeInformation = page(content)?
+            .deserialize("/1/3/anime")
+            .map_err(page_error)?;
+        Ok(anime.into_anime(&HashMap::new()))
+    }
+
+    /// Search responses only carry IDs; callers hydrate each one with a detail request.
     fn parse_search(&self, content: &str) -> Result<Vec<String>, ParseError> {
-        parse_search(content).map_err(Into::into)
+        #[derive(Deserialize)]
+        struct SearchResponse {
+            result: Vec<SearchItem>,
+        }
+        #[derive(Deserialize)]
+        struct SearchItem {
+            #[serde(rename = "_id")]
+            id: String,
+        }
+
+        let response: SearchResponse =
+            serde_json::from_str(content).map_err(|source| ParseError::Decode {
+                context: "YourAnimes search response",
+                source: Box::new(source),
+            })?;
+
+        Ok(response
+            .result
+            .into_iter()
+            .map(|item| format!("{ID_PREFIX}:{}", item.id))
+            .collect())
     }
 }
 
 impl AnimeSource for YourAnimeParser {
     fn list_request(&self, year: u16, season: AnimeSeason) -> Result<HttpRequest, SourceError> {
-        Ok(HttpRequest {
-            method: HttpMethod::Get,
-            url: list_url(year, season),
-            headers: Vec::new(),
-            body: None,
-        })
+        let month = match season {
+            AnimeSeason::Winter => "01",
+            AnimeSeason::Spring => "04",
+            AnimeSeason::Summer => "07",
+            AnimeSeason::Fall => "10",
+        };
+        Ok(get(format!("{LIST_URL}{year}{month}")))
     }
 
     fn search_request(&self, keyword: &str) -> Result<HttpRequest, SourceError> {
-        Ok(HttpRequest {
-            method: HttpMethod::Get,
-            url: search_url(keyword),
-            headers: Vec::new(),
-            body: None,
-        })
+        // Encode the value, not the entire URL, so keywords cannot introduce query parameters.
+        let keyword: String = keyword
+            .bytes()
+            .map(|byte| {
+                if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
+                    char::from(byte).to_string()
+                } else {
+                    format!("%{byte:02X}")
+                }
+            })
+            .collect();
+        Ok(get(format!(
+            "{SEARCH_URL}?tk={keyword}&tags=&page=1&size=100&orderOption=-1&streaming=0&adult=1"
+        )))
     }
 
     fn detail_request(&self, id: &str) -> Result<HttpRequest, SourceError> {
         let id = id
-            .strip_prefix(&format!("{ID_PREFIX}:"))
+            .strip_prefix(ID_PREFIX)
+            .and_then(|id| id.strip_prefix(':'))
+            .filter(|id| !id.is_empty() && id.bytes().all(|byte| byte.is_ascii_digit()))
             .ok_or(ParseError::InvalidResponse {
-                context: "unexpected YourAnimes anime id",
-            })?;
-
-        if id.is_empty() || !id.bytes().all(|byte| byte.is_ascii_digit()) {
-            return Err(ParseError::InvalidResponse {
                 context: "invalid YourAnimes anime id",
-            }
-            .into());
-        }
-        Ok(HttpRequest {
-            method: HttpMethod::Get,
-            url: detail_url(id),
-            headers: Vec::new(),
-            body: None,
-        })
+            })?;
+        Ok(get(format!("{DETAIL_URL}{id}")))
     }
 }
 
-pub(crate) const LIST_URL: &str = "https://youranimes.tw/bangumi/";
-pub(crate) const DETAIL_URL: &str = "https://youranimes.tw/animes/";
-pub(crate) const API_BASE_URL: &str = "https://youranimes.tw/api/v1/";
-
-pub(crate) fn list_url(year: u16, season: AnimeSeason) -> String {
-    let month = match season {
-        AnimeSeason::Winter => "01",
-        AnimeSeason::Spring => "04",
-        AnimeSeason::Summer => "07",
-        AnimeSeason::Fall => "10",
-    };
-
-    format!("{LIST_URL}{year}{month}")
+fn get(url: String) -> HttpRequest {
+    HttpRequest {
+        method: HttpMethod::Get,
+        url,
+        headers: Vec::new(),
+        body: None,
+    }
 }
 
-pub(crate) fn detail_url(id: &str) -> String {
-    format!("{DETAIL_URL}{id}")
+fn page(content: &str) -> Result<NextJsData, ParseError> {
+    NextJsData::parse(content).map_err(page_error)
 }
 
-pub(crate) fn search_url(keyword: &str) -> String {
-    // Encode the value, not the entire URL, so keywords cannot introduce query parameters.
-    let keyword: String = keyword
-        .bytes()
-        .map(|byte| {
-            if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
-                char::from(byte).to_string()
-            } else {
-                format!("%{byte:02X}")
-            }
-        })
-        .collect();
-    format!(
-        "{API_BASE_URL}animes?tk={keyword}&tags=&page=1&size=100&orderOption=-1&streaming=0&adult=1"
-    )
+fn page_error(error: anilist_nextjs::ParseError) -> ParseError {
+    ParseError::Decode {
+        context: "YourAnimes page",
+        source: Box::new(error),
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use chrono::Weekday;
     use serde_json::{Value, json};
 
     use super::*;
 
     fn anime() -> Value {
         json!({
-            "_id": "1108", "adultstreaming": [], "aniType": "TV",
-            "commentCount": 0, "cover": "https://example.com/cover.webp",
-            "episode": "12", "favorability": {"average": 5.0, "counts": 1},
-            "name": "小林家的龍女僕S", "description": "Quotes: \"hello\"\n中文",
-            "status": "finished", "streaming": [], "dayOfWeek": null
+            "_id": "1108",
+            "name": "小林家的龍女僕S",
+            "cover": "https://example.com/cover.webp",
+            "description": "Quotes: \"hello\"\n中文",
+            "dayOfWeek": null
         })
     }
 
+    // Flight payloads are split across scripts in the middle of a record, as on the real site.
     fn html(row: Value) -> String {
         let payload = format!("1:I[42,[],\"default\"]\n2:{row}\n");
-        // Split in the middle of the serialized model; script boundaries are not
-        // record boundaries. Include metadata before the target in the same stream.
         let split = payload.find("description").unwrap() + 5;
         [&payload[..split], &payload[split..]]
             .into_iter()
@@ -185,53 +168,118 @@ mod tests {
             .collect()
     }
 
-    #[test]
-    fn list_extracts_split_flight_model_and_converts_anime() {
-        let result = parse_list(&html(json!(["$", "$L1", null, {"animes": [anime()]}]))).unwrap();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].id, "youranimes:1108");
-        assert_eq!(result[0].name, "小林家的龍女僕S");
-        assert_eq!(result[0].description, "Quotes: \"hello\"\n中文");
+    fn list(animes: Value) -> Result<Vec<Anime>, ParseError> {
+        YourAnimeParser.parse_list(&html(json!(["$", "$L1", null, {"animes": animes}])))
+    }
+
+    fn parse_one(fields: Value) -> Result<Anime, ParseError> {
+        let mut anime = anime();
+        anime
+            .as_object_mut()
+            .unwrap()
+            .extend(fields.as_object().unwrap().clone());
+        Ok(list(json!([anime]))?.remove(0))
     }
 
     #[test]
-    fn detail_extracts_split_flight_model_and_converts_anime() {
-        let result =
-            parse_detail(&html(json!([null, ["$", "$L1", null, {"anime": anime()}]]))).unwrap();
-        assert_eq!(result.id, "youranimes:1108");
-        assert_eq!(result.name, "小林家的龍女僕S");
-        assert_eq!(result.description, "Quotes: \"hello\"\n中文");
+    fn list_and_detail_pages_convert_to_anime() {
+        let listed = list(json!([anime()])).unwrap();
+        let detail = YourAnimeParser
+            .parse_detail(&html(json!([null, ["$", "$L1", null, {"anime": anime()}]])))
+            .unwrap();
+
+        for anime in [&listed[0], &detail] {
+            assert_eq!(anime.id, "youranimes:1108");
+            assert_eq!(anime.name, "小林家的龍女僕S");
+            assert_eq!(anime.description, "Quotes: \"hello\"\n中文");
+            assert_eq!(anime.on_air_time, None);
+        }
     }
 
     #[test]
-    fn missing_hydration_and_wrong_anime_shape_return_errors() {
-        assert!(parse_list("<html></html>").is_err());
-        assert!(parse_detail("<html></html>").is_err());
-        assert!(
-            parse_list(&html(
-                json!(["$", "$L1", null, {"animes": [{"description":"invalid"}]}])
-            ))
-            .is_err()
+    fn invalid_pages_are_errors() {
+        assert!(YourAnimeParser.parse_list("<html></html>").is_err());
+        assert!(YourAnimeParser.parse_detail("<html></html>").is_err());
+        assert!(list(json!([{"description": "missing required fields"}])).is_err());
+    }
+
+    #[test]
+    fn schedule_keeps_tokyo_time() {
+        let anime = parse_one(json!({"dayOfWeek": 0, "date": "2026-07-05 23:45"})).unwrap();
+        let time = anime.on_air_time.unwrap();
+
+        assert_eq!(time.week, Weekday::Sun);
+        assert_eq!(time.minute.map(|minute| minute.get()), Some(23 * 60 + 45));
+        assert_eq!(time.zone, "Asia/Tokyo");
+    }
+
+    #[test]
+    fn weekdays_count_from_sunday_and_unknown_markers_are_unscheduled() {
+        for (raw, expected) in [
+            (json!(0), Some(Weekday::Sun)),
+            (json!(6), Some(Weekday::Sat)),
+            (json!("1"), Some(Weekday::Mon)),
+            (json!(7), None),
+            (json!(-1), None),
+            (json!("未定"), None),
+        ] {
+            let anime = parse_one(json!({"dayOfWeek": raw, "date": "未定"})).unwrap();
+            assert_eq!(anime.on_air_time.map(|time| time.week), expected, "{raw}");
+        }
+    }
+
+    #[test]
+    fn airing_time_must_be_within_a_day() {
+        for (raw, expected) in [("00:00", 0), ("23:59", 23 * 60 + 59), ("12:30:00", 12 * 60 + 30)] {
+            let anime = parse_one(json!({"dayOfWeek": 1, "date": format!("2026-07-06 {raw}")}));
+            let minute = anime.unwrap().on_air_time.unwrap().minute.unwrap();
+            assert_eq!(minute.get(), expected);
+        }
+        for raw in ["24:00", "23:60", "-1:00", "ab:cd", "70000:00"] {
+            let anime = parse_one(json!({"dayOfWeek": 1, "date": format!("2026-07-06 {raw}")}));
+            assert!(anime.is_err(), "{raw} should be rejected");
+        }
+    }
+
+    #[test]
+    fn streams_are_deduplicated_named_and_mark_adult_content() {
+        let stream = json!({"url": "https://example.com/watch", "vendor": "gamer"});
+        let content = html(json!(["$", "$L1", null, {
+            "animes": [{
+                "_id": "1", "name": "Anime", "cover": "", "description": "",
+                "streaming": [stream], "adultstreaming": [stream],
+                "cast": [{"name": "Actor", "role": "Lead"}],
+                "olinks": [{"title": "Official", "url": "https://example.com"}],
+            }],
+            "nameMap": {"gamer": "巴哈姆特動畫瘋"}
+        }]));
+
+        let anime = YourAnimeParser.parse_list(&content).unwrap().remove(0);
+
+        assert!(anime.is_adult);
+        assert_eq!(anime.cast, ["Actor"]);
+        assert_eq!(anime.site[0].title, "Official");
+        assert_eq!(anime.streaming.len(), 1);
+        assert_eq!(anime.streaming[0].name, "巴哈姆特動畫瘋");
+        assert_eq!(
+            anime.streaming[0].logo,
+            "https://d28s5ztqvkii64.cloudfront.net/images/gamer_icon.webp"
         );
     }
 
     #[test]
-    fn search_returns_prefixed_ids_without_detail_hydration() {
-        let result = parse_search(r#"{"result":[{"_id":"1108"},{"_id":"42"}]}"#).unwrap();
+    fn search_returns_prefixed_ids_in_order() {
+        let ids = YourAnimeParser
+            .parse_search(r#"{"result":[{"_id":"1108"},{"_id":"42"}]}"#)
+            .unwrap();
 
-        assert_eq!(result, ["youranimes:1108", "youranimes:42"]);
+        assert_eq!(ids, ["youranimes:1108", "youranimes:42"]);
+        assert!(YourAnimeParser.parse_search("not json").is_err());
     }
 
     #[test]
-    fn search_parse_errors_identify_the_response_stage() {
-        let error = parse_search("not json").unwrap_err();
-
-        assert!(error.to_string().contains("YourAnimes search response"));
-    }
-
-    #[test]
-    fn client_requests_keep_youranimes_protocol_details_in_rust() {
-        let parser = YourAnimeParser::new();
+    fn requests_target_youranimes_urls() {
+        let parser = YourAnimeParser;
 
         assert_eq!(
             parser.list_request(2026, AnimeSeason::Summer).unwrap().url,
@@ -241,54 +289,19 @@ mod tests {
             parser.search_request("女僕").unwrap().url,
             "https://youranimes.tw/api/v1/animes?tk=%E5%A5%B3%E5%83%95&tags=&page=1&size=100&orderOption=-1&streaming=0&adult=1"
         );
+        assert!(
+            parser
+                .search_request("a &b=1#")
+                .unwrap()
+                .url
+                .contains("tk=a%20%26b%3D1%23&tags=")
+        );
         assert_eq!(
             parser.detail_request("youranimes:1108").unwrap().url,
             "https://youranimes.tw/animes/1108"
         );
-        assert!(parser.detail_request("1108").is_err());
-        assert!(parser.detail_request("youranimes:").is_err());
-        assert!(parser.detail_request("youranimes:../42").is_err());
-        assert!(
-            parser
-                .search_request("a &b=1#中")
-                .unwrap()
-                .url
-                .contains("tk=a%20%26b%3D1%23%E4%B8%AD&tags=")
-        );
-    }
-
-    #[test]
-    fn list_resolves_streaming_vendor_names() {
-        let mut anime = anime();
-
-        anime["streaming"] = json!([
-            {
-                "title": "Bahamut",
-                "url": "https://ani.gamer.com.tw/animeVideo.php?sn=1",
-                "vendor": "gamer"
-            }
-        ]);
-
-        let content = html(json!([
-            "$",
-            "$L1",
-            null,
-            {
-                "animes": [anime],
-                "nameMap": {
-                    "gamer": "巴哈姆特動畫瘋"
-                }
-            }
-        ]));
-
-        let result = parse_list(&content).unwrap();
-
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].streaming.len(), 1);
-        assert_eq!(result[0].streaming[0].name, "巴哈姆特動畫瘋");
-        assert_eq!(
-            result[0].streaming[0].logo,
-            "https://d28s5ztqvkii64.cloudfront.net/images/gamer_icon.webp"
-        );
+        for id in ["1108", "youranimes:", "youranimes:../42", "youranimes1108"] {
+            assert!(parser.detail_request(id).is_err(), "{id}");
+        }
     }
 }

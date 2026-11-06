@@ -16,10 +16,7 @@ VERSION = "0.100.0"
 SHA256 = "5e3f0c06995fb2b791584562e32c76d4fed2241d0460a82c3fcdf30a32beadc3"
 ARCHIVE = f"windows-reactor-{VERSION}.crate"
 URL = f"https://static.crates.io/crates/windows-reactor/{ARCHIVE}"
-PATCHES = [
-    ROOT / "patches/windows-reactor/query-submitted.patch",
-    ROOT / "patches/windows-reactor/title-bar-icon.patch",
-]
+PATCH = ROOT / "patches/windows-reactor/query-submitted.patch"
 DESTINATION = ROOT / "vendor/windows-reactor"
 
 
@@ -41,15 +38,9 @@ def setup():
         with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as package:
             package.extractall(staging, filter="data")
         source = staging / f"windows-reactor-{VERSION}"
-        for patch in PATCHES:
-            subprocess.run(
-                ["git", "apply", "--check", str(patch)], cwd=source, check=True
-            )
-            subprocess.run(
-                ["git", "apply", "--whitespace=nowarn", str(patch)],
-                cwd=source,
-                check=True,
-            )
+        subprocess.run(
+            ["git", "apply", "--whitespace=nowarn", str(PATCH)], cwd=source, check=True
+        )
 
         if DESTINATION.exists():
             # Preserve local edits; never silently replace an existing dependency.

@@ -13,20 +13,13 @@ pub fn visuals(width: f64, height: f64) -> WindowVisuals {
 
 pub fn frame(title: &str, subtitle: &str, content: View) -> View {
     frame_with_title_bar(
-        title_bar(title)
+        TitleBar::new()
+            .title(title)
             .subtitle(subtitle)
             .preferred_height(WindowTitleBarHeight::Standard)
             .into(),
         content,
     )
-}
-
-pub fn title_bar(title: &str) -> TitleBar {
-    TitleBar::new()
-        .title(title)
-        .icon_source_data(EncodedImage::from_static(include_bytes!(
-            "../../assets/icon.png"
-        )))
 }
 
 pub fn frame_with_title_bar(title_bar: View, content: View) -> View {

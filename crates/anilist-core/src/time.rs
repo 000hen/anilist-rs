@@ -29,11 +29,6 @@ pub struct AnimeTime {
 }
 
 impl AnimeTime {
-    pub fn minute_of_week(&self) -> Option<u16> {
-        self.minute
-            .map(|minute| self.week.num_days_from_monday() as u16 * 1440 + minute.get())
-    }
-
     #[cfg(feature = "timezone")]
     pub fn to_zone(self, zone: Tz, reference: NaiveDate) -> Result<Self, ZoneConversionError> {
         let Some(minute) = self.minute else {
@@ -73,17 +68,6 @@ impl AnimeTime {
             minute: target_minute,
             zone: zone.name().to_owned(),
         })
-    }
-
-    pub fn airing_cmp(a: &Self, b: &Self) -> Ordering {
-        (
-            a.week.num_days_from_monday(),
-            a.minute.unwrap_or(Minute::MAX),
-        )
-            .cmp(&(
-                b.week.num_days_from_monday(),
-                b.minute.unwrap_or(Minute::MAX),
-            ))
     }
 }
 

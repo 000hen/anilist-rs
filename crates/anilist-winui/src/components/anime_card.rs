@@ -49,5 +49,4 @@ pub fn view(anime: &Anime, width: f64) -> View {
                     streaming::summary(&anime.streaming, width - 16.0),
                 )),
         ))
-        .into()
 }

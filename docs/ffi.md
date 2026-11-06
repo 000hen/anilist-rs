@@ -2,8 +2,8 @@
 
 The Rust libraries own parsing and domain conversion. Consumers can either let
 Rust perform HTTP requests through `NativeAnimeFetcher`, or fetch response bodies
-themselves and pass them to the synchronous `NativeAnimeParser`. Parser-only
-consumers do not need a Rust async runtime.
+themselves using requests from the synchronous `NativeAnimeSource` and pass the
+bodies back to it. Parser-only consumers do not need a Rust async runtime.
 
 ## Build only what you use
 
@@ -57,7 +57,7 @@ capabilities are opt-in.
 
 This distinction matters for parser-only consumers. `--no-default-features`
 by itself builds the generic FFI/model shell but does not include any source
-implementation. To construct `NativeAnimeParser("youranimes")`, enable the
+implementation. To construct `NativeAnimeSource("youranimes")`, enable the
 `youranimes` feature explicitly.
 
 Reqwest's HTTP implementation still requires Tokio. Making HTTP optional does
@@ -68,10 +68,14 @@ not make its fetcher compatible with arbitrary async runtimes.
 | Rust export | Input | Output / behavior |
 | --- | --- | --- |
 | `deserialize_nextjs` | HTML | JSON with `nextData` and `flight` |
-| `NativeAnimeParser::new` | `source_id` | Dynamic parser for the selected compiled-in source |
-| `NativeAnimeParser::parse_list` | Season page HTML | `Vec<Anime>` |
-| `NativeAnimeParser::parse_detail` | Detail page HTML | `Anime` |
-| `NativeAnimeParser::parse_search` | Search API JSON | `Vec<String>` source IDs |
+| `available_sources` | None | Compiled-in source IDs and names |
+| `NativeAnimeSource::new` | `source_id` | Dynamic source for the selected compiled-in source |
+| `NativeAnimeSource::list_request` | Year + season | `HttpRequest` for the season page |
+| `NativeAnimeSource::search_request` | Keyword | `HttpRequest` for the search API |
+| `NativeAnimeSource::detail_request` | Anime ID | `HttpRequest` for the detail page |
+| `NativeAnimeSource::parse_list` | Season page HTML | `Vec<Anime>` |
+| `NativeAnimeSource::parse_detail` | Detail page HTML | `Anime` |
+| `NativeAnimeSource::parse_search` | Search API JSON | `Vec<String>` source IDs |
 | `NativeAnimeFetcher::new` | `source_id` | Dynamic HTTP fetcher; requires `http` and the source feature |
 | `NativeAnimeFetcher::list` | Year + season | `Vec<Anime>` |
 | `NativeAnimeFetcher::detail` | Anime ID | `Anime` |
@@ -84,8 +88,8 @@ The currently supported dynamic source ID is `youranimes` when the
 `AnilistError::UnsupportedSource`.
 
 Search parsing preserves response order and returns IDs, not fabricated partial
-anime records. A parser-only client can fetch each `/animes/<id>` page using the
-portion after `youranimes:`, then call `NativeAnimeParser::parse_detail`.
+anime records. A parser-only client fetches each ID with `detail_request(id)`, then
+calls `parse_detail`.
 `NativeAnimeFetcher::search` performs those detail requests inside Rust.
 
 Malformed parser input is mapped into `AnilistError::InvalidResponse`.
@@ -138,11 +142,12 @@ an HTTP-enabled artifact and package them with a parser-only binary: the exporte
 API surface differs by feature set. Use separate output directories for variants
 to avoid retaining stale generated files.
 
-The Kotlin-side parser shape is intentionally small:
+The Kotlin side stays small:
 
 ```kotlin
-val parser = NativeAnimeParser("youranimes")
-val anime = parser.parseList(responseBody)
+val source = NativeAnimeSource("youranimes")
+val request = source.listRequest(year, season)
+val anime = source.parseList(fetchWithOkHttp(request))
 ```
 
 Kotlin can continue to own HTTP status handling, cancellation, retries, and
@@ -173,8 +178,8 @@ cargo test -p anilist-ffi
 # YourAnimes parser crate without HTTP/timezone extras
 cargo test -p anilist-youranimes --no-default-features
 
-# YourAnimes default test set while skipping live network tests when necessary
-cargo test -p anilist-youranimes --features http,system-timezone -- --skip tests::test_fetching
+# YourAnimes with HTTP and timezone support (add `-- --ignored` to run live network tests)
+cargo test -p anilist-youranimes --features http,system-timezone
 
 # Verify the lean FFI dependency tree
 cargo tree -p anilist-ffi --no-default-features --features youranimes --edges normal
@@ -207,20 +212,17 @@ platform/compiler-specific.
 
 ## Source-owned requests with host-owned HTTP
 
-`NativeAnimeSource` extends the parser surface with `list_request`, `search_request`, and
-`detail_request`. Each returns source-independent `HttpRequest` data (method, URL, headers,
+`list_request`, `search_request`, and `detail_request` each return source-independent `HttpRequest` data (method, URL, headers,
 optional body). `available_sources()` lists the compiled source IDs. Enable `all-sources`
 (currently YourAnimes) without `http` for host-owned networking.
 
 In Rust, `AnimeSource: AnimeParser` describes the protocol, `HttpClient` executes shared
 request data, and `AnimeFetcher` describes the asynchronous fetch operations. The existing
 `YourAnimesFetcher<C>` composes a source with any `HttpClient`; reqwest's implementation is
-behind `anilist-source/http`. The former asynchronous `AnimeSource` trait is now named
-`AnimeFetcher` so source definitions do not imply network ownership.
+behind `anilist-source/http`.
 
 Android can execute requests using OkHttp and pass the response body back to `parse_list`,
-`parse_search`, or `parse_detail`. In particular, use `detail_request(id)` for search IDs;
-callers no longer need to strip source prefixes or construct provider URLs.
+`parse_search`, or `parse_detail`.
 Generate Android bindings with a global `--config` file containing
 `[defaults.bindings.kotlin]` and `android = true`.
 The FFI error payload is named `detail` to avoid conflicting with Kotlin `Throwable.message`.

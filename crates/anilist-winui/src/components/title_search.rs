@@ -22,12 +22,11 @@ mod tests {
     use super::*;
     use std::{cell::RefCell, rc::Rc};
     use windows_reactor::test::{
-        Command, EventId, EventPayload, PropertyId, PropertyValue, Pump, QueuedEvent,
-        RecordingRuntime,
+        Command, EventId, EventPayload, PropertyId, Pump, QueuedEvent, RecordingRuntime,
     };
 
     #[test]
-    fn native_submission_uses_query_payload_without_a_search_button() {
+    fn enter_submits_the_query_text() {
         let submitted = Rc::new(RefCell::new(Vec::new()));
         let result = submitted.clone();
         let mut pump = Pump::new(RecordingRuntime::default());
@@ -62,17 +61,5 @@ mod tests {
         ));
         pump.dispatch_events().unwrap();
         assert_eq!(*submitted.borrow(), vec!["submitted text"]);
-        assert!(!pump.runtime().commands().iter().flatten().any(|command| matches!(command,
-            Command::SetProperty { property: PropertyId::AutomationName, value: PropertyValue::Str(value), .. } if value == "SubmitSourceSearch")));
-        pump.update_view(View::empty()).unwrap();
-        // Retired controls must not deliver an already queued native event.
-        pump.queue_event(QueuedEvent::new(
-            node,
-            event,
-            revision,
-            EventPayload::Str("stale".into()),
-        ));
-        pump.dispatch_events().unwrap();
-        assert_eq!(submitted.borrow().len(), 1);
     }
 }

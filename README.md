@@ -46,9 +46,9 @@ anilist-rs/crates
 
 ### Rust / Kotlin FFI
 
-可獨立建置 Next.js FFI。`anilist-ffi` 提供三種整合層級：`NativeAnimeSource` 產生通用
-`HttpRequest` 並解析回應，讓宿主自行執行網路請求；`NativeAnimeParser` 只解析宿主提供的內容；
-`NativeAnimeFetcher` 則使用 Rust 的 HTTP client 完成整個流程。
+可獨立建置 Next.js FFI。`anilist-ffi` 提供兩種整合層級：`NativeAnimeSource` 產生通用
+`HttpRequest` 並解析回應，讓宿主自行執行網路請求；`NativeAnimeFetcher` 則使用 Rust 的 HTTP
+client 完成整個流程。
 
 Android 等自行管理網路的宿主可使用 `--no-default-features --features all-sources`，
 避免打包 reqwest、Tokio 與系統時區資料。預設建置包含所有來源、Rust HTTP 與系統時區支援。
@@ -100,7 +100,7 @@ anilist-nextjs ───────┘
 執行非同步 `list`、`search`、`detail` 的完整 fetcher。`YourAnimesFetcher<C>` 可搭配任意
 `HttpClient`，預設 Rust HTTP 功能則使用 reqwest。
 
-FFI 透過 source ID 動態建立 `NativeAnimeSource`、`NativeAnimeParser` 或 `NativeAnimeFetcher`。
+FFI 透過 source ID 動態建立 `NativeAnimeSource` 或 `NativeAnimeFetcher`。
 宿主可選擇自行執行 `HttpRequest`，或讓 Rust 擁有網路流程，而不需要為每個來源建立另一套 FFI API。
 
 時區轉換由 `anilist-core` 的 `AnimeTime::to_zone()` 負責，能正確處理跨日、跨星期的邊界情況。

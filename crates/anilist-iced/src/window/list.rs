@@ -2,17 +2,13 @@ use anilist_core::{ScheduleDay, get_current_week_order, season::AnimeSeason};
 use chrono::{Datelike, Local};
 use iced::{
     Alignment, Element, Length,
-    widget::{center, column, container, grid, scrollable, stack, text},
+    widget::{center, column, container, grid, scrollable, text},
 };
 
 use crate::{
     component::anime,
     state::{App, Message},
 };
-
-pub fn view(app: &App) -> Element<'_, Message> {
-    stack![display_items(app)].into()
-}
 
 fn week_section<'a>(
     app: &'a App,
@@ -23,7 +19,7 @@ fn week_section<'a>(
         anime_ids
             .iter()
             .filter_map(|id| app.state.animes.get(id))
-            .map(|anime| anime::view(&app.image, anime, Message::Image, Message::Anime)),
+            .map(|anime| anime::view(&app.image, anime)),
     )
     .fluid(420.0)
     .spacing(10);
@@ -46,7 +42,7 @@ fn week_section<'a>(
     .into()
 }
 
-fn display_items(app: &App) -> Element<'_, Message> {
+pub fn view(app: &App) -> Element<'_, Message> {
     let now = Local::now();
     let year = now.year();
     let season = AnimeSeason::try_from(now.month() as u8).expect("month should map to a season");

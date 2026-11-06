@@ -31,13 +31,14 @@ pub fn view(app: &Application, context: &mut ViewContext<Application>) -> View {
                 error: app.search_error.as_deref(),
                 width: app.width,
             },
-            context.callback(|()| Message::SearchSource),
+            context.callback(|()| Message::RetrySearch),
             context.callback(|anime| Message::Page(schedule::Event::Open(anime))),
         ),
     };
 
     shell::frame_with_title_bar(
-        shell::title_bar("Anilist")
+        TitleBar::new()
+            .title("Anilist")
             .is_back_button_visible(app.surface == MainSurface::Search)
             .is_back_button_enabled(app.surface == MainSurface::Search)
             .on_back_requested(context.callback(|()| Message::Back))
@@ -50,8 +51,7 @@ pub fn view(app: &Application, context: &mut ViewContext<Application>) -> View {
                     context.callback(Message::SourceQuery),
                     context.callback(Message::SubmitSearch),
                 ),
-            )])
-            .into(),
+            )]),
         content,
     )
 }

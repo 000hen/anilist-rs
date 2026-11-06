@@ -47,11 +47,10 @@ anilist-rs/crates
 
 ### Rust / Kotlin FFI
 
-The standalone Next.js FFI can be built independently. `anilist-ffi` offers three
+The standalone Next.js FFI can be built independently. `anilist-ffi` offers two
 integration levels: `NativeAnimeSource` produces source-independent `HttpRequest`
-values and parses responses for host-owned networking; `NativeAnimeParser` only
-parses content supplied by the host; and `NativeAnimeFetcher` lets Rust perform
-the complete HTTP flow.
+values and parses responses for host-owned networking, and `NativeAnimeFetcher`
+lets Rust perform the complete HTTP flow.
 
 Hosts such as Android can build with `--no-default-features --features all-sources`
 to exclude reqwest, Tokio, and system timezone data. The default build includes all
@@ -105,7 +104,7 @@ parsing. `AnimeSource` extends it with `list_request`, `search_request`, and
 defines the complete asynchronous `list`, `search`, and `detail` operations.
 `YourAnimesFetcher<C>` can use any `HttpClient`; the default Rust HTTP feature uses reqwest.
 
-The FFI constructs `NativeAnimeSource`, `NativeAnimeParser`, or `NativeAnimeFetcher`
+The FFI constructs `NativeAnimeSource` or `NativeAnimeFetcher`
 dynamically from a source ID. A host can execute the returned `HttpRequest` itself or
 let Rust own the network flow without requiring a parallel FFI surface per source.
 

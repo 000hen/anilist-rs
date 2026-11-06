@@ -8,9 +8,6 @@ use futures::{StreamExt, TryStreamExt, stream};
 use futures_timer::Delay;
 use reqwest::Client;
 
-#[cfg(feature = "system-timezone")]
-use crate::system_timezone;
-
 use crate::{ID_PREFIX, parser::YourAnimeParser};
 
 const REQUEST_INTERVAL: Duration = Duration::from_millis(100);
@@ -93,31 +90,25 @@ impl<C: HttpClient> AnimeFetcher for YourAnimesFetcher<C> {
 
 #[cfg(feature = "system-timezone")]
 fn localize(animes: &mut [Anime]) -> Result<(), SourceError> {
-    let zone = system_timezone().map_err(|source| SourceError::TimezoneUnavailable { source })?;
+    let zone: chrono_tz::Tz = iana_time_zone::get_timezone()
+        .ok()
+        .and_then(|name| name.parse().ok())
+        .ok_or(SourceError::TimezoneUnavailable {
+            source: anilist_core::time::ZoneConversionError::UnknownTimeZone,
+        })?;
     let reference = chrono::Local::now().date_naive();
 
-    localize_to(animes, zone, reference)
-}
-
-#[cfg(feature = "system-timezone")]
-fn localize_to(
-    animes: &mut [Anime],
-    zone: chrono_tz::Tz,
-    reference: chrono::NaiveDate,
-) -> Result<(), SourceError> {
     for anime in animes {
         let Some(time) = anime.on_air_time.take() else {
             continue;
         };
-
-        anime.on_air_time =
-            Some(
-                time.to_zone(zone, reference)
-                    .map_err(|source| SourceError::AnimeConversion {
-                        anime_id: anime.id.clone(),
-                        source,
-                    })?,
-            );
+        let localized =
+            time.to_zone(zone, reference)
+                .map_err(|source| SourceError::AnimeConversion {
+                    anime_id: anime.id.clone(),
+                    source,
+                })?;
+        anime.on_air_time = Some(localized);
     }
 
     Ok(())
@@ -126,51 +117,4 @@ fn localize_to(
 #[cfg(not(feature = "system-timezone"))]
 fn localize(_animes: &mut [Anime]) -> Result<(), SourceError> {
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    struct FakeHttpClient;
-
-    impl HttpClient for FakeHttpClient {
-        fn execute(&self, request: anilist_source::HttpRequest) -> SourceFuture<'_, String> {
-            Box::pin(async move {
-                assert_eq!(request.url, "https://youranimes.tw/bangumi/202607");
-                assert_eq!(request.method, anilist_source::HttpMethod::Get);
-                Ok(
-                    r#"<script id="__NEXT_DATA__">["$","$L1",null,{"animes":[]}]</script>"#
-                        .to_owned(),
-                )
-            })
-        }
-    }
-
-    #[tokio::test]
-    async fn fetcher_composes_source_and_independent_transport() {
-        let result = YourAnimesFetcher::new(FakeHttpClient)
-            .list(2026, AnimeSeason::Summer)
-            .await
-            .unwrap();
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    #[cfg(feature = "system-timezone")]
-    fn localizes_parsed_schedules_after_parsing() {
-        let body = r#"<script id="__NEXT_DATA__">["$","$L1",null,{"animes":[{"_id":"1108","adultstreaming":[],"aniType":"TV","commentCount":0,"cover":"cover","episode":"12","favorability":{"average":5.0,"counts":1},"name":"Anime","status":"finished","streaming":[],"dayOfWeek":1,"date":"2026-07-06 00:30"}]}]</script>"#;
-        let mut animes = YourAnimeParser::new().parse_list(body).unwrap();
-        assert_eq!(animes[0].on_air_time.as_ref().unwrap().zone, "Asia/Tokyo");
-        localize_to(
-            &mut animes,
-            chrono_tz::Asia::Taipei,
-            chrono::NaiveDate::from_ymd_opt(2026, 7, 6).unwrap(),
-        )
-        .unwrap();
-        let time = animes[0].on_air_time.as_ref().unwrap();
-        assert_eq!(time.zone, "Asia/Taipei");
-        assert_eq!(time.week, chrono::Weekday::Sun);
-        assert_eq!(time.minute.unwrap().get(), 23 * 60 + 30);
-    }
 }

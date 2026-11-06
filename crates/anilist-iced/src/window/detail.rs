@@ -9,7 +9,7 @@ use crate::{component::imager::Imager, state::Message};
 
 pub fn view<'a>(imager: &'a Imager, anime: &'a Anime) -> Element<'a, Message> {
     let image = match anime.image.as_deref() {
-        Some(image) => imager.view(&image).map(Message::Image),
+        Some(image) => imager.view(image).map(Message::Image),
         None => container("").into(),
     };
 

@@ -12,33 +12,16 @@ use iced::{
 use reqwest::Client;
 
 use crate::{
-    component::{
-        anime,
-        imager::{Imager, ImagerMessage},
-    },
+    component::imager::{Imager, ImagerMessage},
     window::{detail, list},
 };
 
 static ICON_BYTES: &[u8] = include_bytes!("./image/icon.ico");
 
-#[derive(Debug, Clone)]
-pub enum WindowType {
-    MainWindow,
-    AnimeDetailWindow { anime_id: String },
-}
-
+#[derive(Default)]
 pub struct AppState {
     pub animes: HashMap<String, Anime>,
     pub animes_week: HashMap<ScheduleDay, Vec<String>>,
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            animes: Default::default(),
-            animes_week: Default::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -48,13 +31,13 @@ pub enum Message {
 
     CloseWindow(window::Id),
     OpenWeb(String),
-    OpenWindow {
+    OpenDetail(String),
+    DetailOpened {
         window_id: window::Id,
-        window_type: WindowType,
+        anime_id: String,
     },
 
     Image(ImagerMessage),
-    Anime(anime::Message),
 }
 
 pub struct App {
@@ -64,7 +47,7 @@ pub struct App {
     pub image: Imager,
     pub state: AppState,
 
-    windows: HashMap<window::Id, WindowType>,
+    detail_windows: HashMap<window::Id, String>,
 }
 
 fn create_window_settings() -> Settings {
@@ -79,7 +62,7 @@ impl App {
     pub fn new() -> (Self, Task<Message>) {
         let client = Client::new();
         let source = YourAnimesFetcher::new(client.clone());
-        let imager = Imager::new(client.clone());
+        let imager = Imager::new(client);
 
         let now = Local::now();
         let year = now.year() as u16;
@@ -90,18 +73,12 @@ impl App {
         (
             Self {
                 main_window: id,
-                source: source,
+                source,
                 image: imager,
-                windows: Default::default(),
-                state: Default::default(),
+                state: AppState::default(),
+                detail_windows: HashMap::new(),
             },
-            Task::batch([
-                task.map(move |id| Message::OpenWindow {
-                    window_id: id,
-                    window_type: WindowType::MainWindow,
-                }),
-                Task::done(Message::UpdateAnime(year, season)),
-            ]),
+            Task::batch([task.discard(), Task::done(Message::UpdateAnime(year, season))]),
         )
     }
 }
@@ -115,18 +92,16 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
             })
         }
         Message::AnimeInformation(data) => {
-            if let Some(animes) = data {
-                let mut items = animes;
-                items.sort_by(|a, b| a.on_air_time.cmp(&b.on_air_time));
+            if let Some(mut animes) = data {
+                animes.sort_by(|a, b| a.on_air_time.cmp(&b.on_air_time));
 
-                app.state.animes = items
+                app.state.animes = animes
                     .into_iter()
                     .map(|anime| {
                         let week = anime
                             .on_air_time
                             .as_ref()
-                            .map(|d| ScheduleDay::Weekday(d.week))
-                            .unwrap_or(ScheduleDay::Unknown);
+                            .map_or(ScheduleDay::Unknown, |time| ScheduleDay::Weekday(time.week));
 
                         app.state
                             .animes_week
@@ -141,41 +116,36 @@ pub fn update(app: &mut App, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::Image(message) => app.image.update(message).map(Message::Image),
-        Message::Anime(anime::Message::Clicked(anime_id)) => {
+        Message::OpenDetail(anime_id) => {
             let (_, task) = window::open(Settings {
                 size: Size::new(700.0, 900.0),
                 ..create_window_settings()
             });
 
-            task.map(move |id| Message::OpenWindow {
-                window_id: id,
-                window_type: WindowType::AnimeDetailWindow {
-                    anime_id: anime_id.clone(),
-                },
+            task.map(move |window_id| Message::DetailOpened {
+                window_id,
+                anime_id: anime_id.clone(),
             })
         }
-
+        Message::DetailOpened {
+            window_id,
+            anime_id,
+        } => {
+            app.detail_windows.insert(window_id, anime_id);
+            Task::none()
+        }
         Message::OpenWeb(url) => {
             let _ = open::that(url);
             Task::none()
         }
-
         Message::CloseWindow(id) => {
-            app.windows.remove(&id);
+            app.detail_windows.remove(&id);
 
             if id == app.main_window {
                 iced::exit()
             } else {
                 Task::none()
             }
-        }
-
-        Message::OpenWindow {
-            window_id,
-            window_type,
-        } => {
-            app.windows.insert(window_id, window_type);
-            Task::none()
         }
     }
 }
@@ -184,29 +154,23 @@ pub fn window_close_subscription(_: &App) -> Subscription<Message> {
     window::close_events().map(Message::CloseWindow)
 }
 
+fn detail_anime(app: &App, window_id: window::Id) -> Option<&Anime> {
+    app.detail_windows
+        .get(&window_id)
+        .and_then(|anime_id| app.state.animes.get(anime_id))
+}
+
 pub fn view(app: &App, window_id: window::Id) -> Element<'_, Message> {
     if window_id == app.main_window {
         return list::view(app);
     }
 
-    match app.windows.get(&window_id) {
-        Some(WindowType::MainWindow) => list::view(app),
-        Some(WindowType::AnimeDetailWindow { anime_id }) => match app.state.animes.get(anime_id) {
-            Some(anime) => detail::view(&app.image, anime),
-            None => center(container("Sorry, not found it")).into(),
-        },
-        None => container("Not implemented").into(),
+    match detail_anime(app, window_id) {
+        Some(anime) => detail::view(&app.image, anime),
+        None => center(container("找不到這部動畫")).into(),
     }
 }
 
 pub fn title(app: &App, window_id: window::Id) -> String {
-    match app.windows.get(&window_id) {
-        Some(WindowType::AnimeDetailWindow { anime_id }) => app
-            .state
-            .animes
-            .get(anime_id)
-            .and_then(|anime| Some(anime.name.clone()))
-            .unwrap_or("Unknown".to_owned()),
-        _ => "Anilist".to_owned(),
-    }
+    detail_anime(app, window_id).map_or_else(|| "Anilist".to_owned(), |anime| anime.name.clone())
 }

@@ -18,18 +18,6 @@ pub enum ParseError {
     Record { offset: usize, reason: &'static str },
 }
 
-impl ParseError {
-    pub fn context(&self) -> &'static str {
-        match self {
-            Self::MissingData => "Next.js hydration data was not found",
-            Self::MissingPath { .. } => "Next.js target data was not found",
-            Self::Json { context, .. } => context,
-            Self::Transport { .. } => "Next.js Flight transport",
-            Self::Record { .. } => "Next.js Flight record",
-        }
-    }
-}
-
 pub(crate) fn json<T: DeserializeOwned>(
     input: &str,
     context: &'static str,

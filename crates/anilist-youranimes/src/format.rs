@@ -13,6 +13,7 @@ use crate::ID_PREFIX;
 
 const VENDOR_ICON_BASE_URL: &str = "https://d28s5ztqvkii64.cloudfront.net/images";
 
+/// Links without a URL appear on some older seasons; they cannot be opened and are skipped.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnimeInformation {
@@ -48,13 +49,15 @@ struct Cast {
 #[derive(Debug, Deserialize)]
 struct SocialLink {
     title: String,
-    url: String,
+    #[serde(default)]
+    url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Streaming {
-    url: String,
+    #[serde(default)]
+    url: Option<String>,
     vendor: String,
     #[serde(default)]
     vendor_local_name: Option<String>,
@@ -75,15 +78,17 @@ impl AnimeInformation {
             .streaming
             .into_iter()
             .chain(self.adultstreaming)
-            .filter(|stream| seen_urls.insert(stream.url.clone()))
-            .map(|stream| AnimeStreaming {
-                name: vendors
-                    .get(&stream.vendor)
-                    .cloned()
-                    .or(stream.vendor_local_name)
-                    .unwrap_or_else(|| stream.vendor.clone()),
-                logo: format!("{VENDOR_ICON_BASE_URL}/{}_icon.webp", stream.vendor),
-                url: stream.url,
+            .filter_map(|stream| {
+                let url = stream.url?;
+                seen_urls.insert(url.clone()).then(|| AnimeStreaming {
+                    name: vendors
+                        .get(&stream.vendor)
+                        .cloned()
+                        .or(stream.vendor_local_name)
+                        .unwrap_or_else(|| stream.vendor.clone()),
+                    logo: format!("{VENDOR_ICON_BASE_URL}/{}_icon.webp", stream.vendor),
+                    url,
+                })
             })
             .collect();
 
@@ -101,9 +106,11 @@ impl AnimeInformation {
             site: self
                 .olinks
                 .into_iter()
-                .map(|link| AnimeSite {
-                    title: link.title,
-                    url: link.url,
+                .filter_map(|link| {
+                    Some(AnimeSite {
+                        url: link.url?,
+                        title: link.title,
+                    })
                 })
                 .collect(),
         }

@@ -242,14 +242,14 @@ mod tests {
     }
 
     #[test]
-    fn streams_are_deduplicated_named_and_mark_adult_content() {
+    fn streams_are_deduplicated_named_and_skip_missing_urls() {
         let stream = json!({"url": "https://example.com/watch", "vendor": "gamer"});
         let content = html(json!(["$", "$L1", null, {
             "animes": [{
                 "_id": "1", "name": "Anime", "cover": "", "description": "",
-                "streaming": [stream], "adultstreaming": [stream],
+                "streaming": [stream, {"vendor": "netflix"}], "adultstreaming": [stream],
                 "cast": [{"name": "Actor", "role": "Lead"}],
-                "olinks": [{"title": "Official", "url": "https://example.com"}],
+                "olinks": [{"title": "Official", "url": "https://example.com"}, {"title": "Gone"}],
             }],
             "nameMap": {"gamer": "巴哈姆特動畫瘋"}
         }]));
@@ -258,6 +258,7 @@ mod tests {
 
         assert!(anime.is_adult);
         assert_eq!(anime.cast, ["Actor"]);
+        assert_eq!(anime.site.len(), 1);
         assert_eq!(anime.site[0].title, "Official");
         assert_eq!(anime.streaming.len(), 1);
         assert_eq!(anime.streaming[0].name, "巴哈姆特動畫瘋");

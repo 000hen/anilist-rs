@@ -28,6 +28,15 @@ mod live_tests {
 
     #[tokio::test]
     #[ignore = "requires network access to youranimes.tw"]
+    async fn lists_older_seasons_with_incomplete_streams() {
+        for (year, season) in [(2020, AnimeSeason::Summer), (2024, AnimeSeason::Summer)] {
+            let animes = fetcher().list(year, season).await.unwrap();
+            assert!(!animes.is_empty(), "{year} {season}");
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires network access to youranimes.tw"]
     async fn fetches_detail_and_search() {
         let detail = fetcher().detail("youranimes:1108").await.unwrap();
         assert_eq!(detail.name, "小林家的龍女僕S");
